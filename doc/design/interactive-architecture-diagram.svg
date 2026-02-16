@@ -1,0 +1,170 @@
+<svg viewBox="0 0 1400 1000" xmlns="http://www.w3.org/2000/svg">
+    <!-- Define styles -->
+    <defs>
+        <style>
+            .layer-box { fill: #f0f9ff; stroke: #0284c7; stroke-width: 2; rx: 8; }
+            .core-box { fill: #fef3c7; stroke: #d97706; stroke-width: 3; rx: 8; }
+            .component { fill: white; stroke: #64748b; stroke-width: 2; rx: 6; cursor: pointer; transition: all 0.3s; }
+            .component:hover { fill: #e0f2fe; stroke: #0284c7; stroke-width: 3; }
+            .interface { fill: #f1f5f9; stroke: #64748b; stroke-width: 1.5; stroke-dasharray: 5,5; rx: 6; }
+            .title { font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; fill: #1e293b; }
+            .subtitle { font-family: Arial, sans-serif; font-size: 14px; fill: #475569; }
+            .layer-title { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; fill: #0f172a; }
+            .arrow { stroke: #64748b; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+            .arrow-label { font-family: Arial, sans-serif; font-size: 12px; fill: #64748b; }
+            .note { font-family: Arial, sans-serif; font-size: 11px; fill: #64748b; font-style: italic; }
+        </style>
+        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+            <polygon points="0 0, 10 3, 0 6" fill="#64748b" />
+        </marker>
+    </defs>
+
+    <!-- Background -->
+    <rect width="1400" height="1000" fill="#ffffff"/>
+
+    <!-- Title -->
+    <text x="700" y="35" text-anchor="middle" style="font-family: Arial; font-size: 24px; font-weight: bold; fill: #0f172a;">
+        Event Storming Tool - Hexagonal Architecture (DDD)
+    </text>
+
+    <!-- Presentation Layer -->
+    <rect class="layer-box" x="50" y="70" width="1300" height="180"/>
+    <text class="layer-title" x="70" y="95">Presentation Layer (UI)</text>
+
+    <rect class="component" x="80" y="110" width="180" height="120" id="electron-ui"/>
+    <text class="title" x="170" y="145" text-anchor="middle">Electron UI</text>
+    <text class="subtitle" x="170" y="165" text-anchor="middle">- Canvas 렌더링</text>
+    <text class="subtitle" x="170" y="185" text-anchor="middle">- 드래그&amp;드롭</text>
+    <text class="subtitle" x="170" y="205" text-anchor="middle">- 이벤트 핸들러</text>
+
+    <rect class="component" x="290" y="110" width="180" height="120"/>
+    <text class="title" x="380" y="145" text-anchor="middle">View Models</text>
+    <text class="subtitle" x="380" y="165" text-anchor="middle">- 화면 상태 관리</text>
+    <text class="subtitle" x="380" y="185" text-anchor="middle">- UI 데이터 변환</text>
+    <text class="subtitle" x="380" y="205" text-anchor="middle">- React/Vue 상태</text>
+
+    <rect class="component" x="500" y="110" width="180" height="120"/>
+    <text class="title" x="590" y="145" text-anchor="middle">Controllers</text>
+    <text class="subtitle" x="590" y="165" text-anchor="middle">- 사용자 입력 처리</text>
+    <text class="subtitle" x="590" y="185" text-anchor="middle">- 명령 디스패치</text>
+    <text class="subtitle" x="590" y="205" text-anchor="middle">- 쿼리 실행</text>
+
+    <!-- Application Layer -->
+    <rect class="layer-box" x="50" y="280" width="1300" height="180"/>
+    <text class="layer-title" x="70" y="305">Application Layer (Use Cases)</text>
+
+    <rect class="component" x="80" y="320" width="200" height="120"/>
+    <text class="title" x="180" y="355" text-anchor="middle">Command Handlers</text>
+    <text class="subtitle" x="180" y="375" text-anchor="middle">- CreateEventCommand</text>
+    <text class="subtitle" x="180" y="395" text-anchor="middle">- MoveEventCommand</text>
+    <text class="subtitle" x="180" y="415" text-anchor="middle">- DeleteEventCommand</text>
+
+    <rect class="component" x="310" y="320" width="200" height="120"/>
+    <text class="title" x="410" y="355" text-anchor="middle">Query Handlers</text>
+    <text class="subtitle" x="410" y="375" text-anchor="middle">- GetAllEventsQuery</text>
+    <text class="subtitle" x="410" y="395" text-anchor="middle">- GetBoardStateQuery</text>
+    <text class="subtitle" x="410" y="415" text-anchor="middle">- ExportQuery</text>
+
+    <rect class="component" x="540" y="320" width="200" height="120"/>
+    <text class="title" x="640" y="355" text-anchor="middle">Application Services</text>
+    <text class="subtitle" x="640" y="375" text-anchor="middle">- 트랜잭션 관리</text>
+    <text class="subtitle" x="640" y="395" text-anchor="middle">- 유스케이스 조율</text>
+    <text class="subtitle" x="640" y="415" text-anchor="middle">- DTO 변환</text>
+
+    <!-- CORE DOMAIN -->
+    <rect class="core-box" x="50" y="490" width="620" height="280"/>
+    <text class="layer-title" x="70" y="515" fill="#d97706">🎯 Core Domain (Pure Business Logic)</text>
+
+    <!-- Entities -->
+    <rect class="component" x="80" y="535" width="160" height="100" fill="#fff7ed"/>
+    <text class="title" x="160" y="565" text-anchor="middle">Entities</text>
+    <text class="subtitle" x="160" y="585" text-anchor="middle">- Event</text>
+    <text class="subtitle" x="160" y="605" text-anchor="middle">- Command</text>
+    <text class="subtitle" x="160" y="625" text-anchor="middle">- Aggregate</text>
+
+    <rect class="component" x="260" y="535" width="160" height="100" fill="#fff7ed"/>
+    <text class="title" x="340" y="565" text-anchor="middle">Value Objects</text>
+    <text class="subtitle" x="340" y="585" text-anchor="middle">- Position</text>
+    <text class="subtitle" x="340" y="605" text-anchor="middle">- EventType</text>
+    <text class="subtitle" x="340" y="625" text-anchor="middle">- Timeline</text>
+
+    <rect class="component" x="440" y="535" width="210" height="100" fill="#fff7ed"/>
+    <text class="title" x="545" y="565" text-anchor="middle">Domain Services</text>
+    <text class="subtitle" x="545" y="585" text-anchor="middle">- EventStormingBoard</text>
+    <text class="subtitle" x="545" y="605" text-anchor="middle">- FlowValidator</text>
+    <text class="subtitle" x="545" y="625" text-anchor="middle">- AggregateDetector</text>
+
+    <!-- Ports (Interfaces) -->
+    <rect class="interface" x="80" y="655" width="280" height="95"/>
+    <text class="title" x="220" y="685" text-anchor="middle">Inbound Ports (입력)</text>
+    <text class="subtitle" x="220" y="705" text-anchor="middle">- IEventStormingService</text>
+    <text class="subtitle" x="220" y="725" text-anchor="middle">- IEventRepository</text>
+
+    <rect class="interface" x="380" y="655" width="270" height="95"/>
+    <text class="title" x="515" y="685" text-anchor="middle">Outbound Ports (출력)</text>
+    <text class="subtitle" x="515" y="705" text-anchor="middle">- IFileStorage</text>
+    <text class="subtitle" x="515" y="725" text-anchor="middle">- IDiagramGenerator</text>
+
+    <!-- Infrastructure Layer -->
+    <rect class="layer-box" x="700" y="490" width="650" height="280"/>
+    <text class="layer-title" x="720" y="515">Infrastructure Layer (Adapters)</text>
+
+    <rect class="component" x="730" y="535" width="180" height="100"/>
+    <text class="title" x="820" y="565" text-anchor="middle">File System</text>
+    <text class="subtitle" x="820" y="585" text-anchor="middle">- JSON 저장/로드</text>
+    <text class="subtitle" x="820" y="605" text-anchor="middle">- 파일 검증</text>
+    <text class="subtitle" x="820" y="625" text-anchor="middle">- Path Sanitization</text>
+
+    <rect class="component" x="930" y="535" width="180" height="100"/>
+    <text class="title" x="1020" y="565" text-anchor="middle">Export Adapters</text>
+    <text class="subtitle" x="1020" y="585" text-anchor="middle">- PNG Exporter</text>
+    <text class="subtitle" x="1020" y="605" text-anchor="middle">- PDF Generator</text>
+    <text class="subtitle" x="1020" y="625" text-anchor="middle">- Mermaid/PlantUML</text>
+
+    <rect class="component" x="1140" y="535" width="180" height="100"/>
+    <text class="title" x="1230" y="565" text-anchor="middle">Import Adapters</text>
+    <text class="subtitle" x="1230" y="585" text-anchor="middle">- Schema Validator</text>
+    <text class="subtitle" x="1230" y="605" text-anchor="middle">- Sanitizer</text>
+    <text class="subtitle" x="1230" y="625" text-anchor="middle">- Parser (안전)</text>
+
+    <rect class="component" x="730" y="655" width="280" height="95"/>
+    <text class="title" x="870" y="685" text-anchor="middle">Repository Implementation</text>
+    <text class="subtitle" x="870" y="705" text-anchor="middle">- InMemoryRepository</text>
+    <text class="subtitle" x="870" y="725" text-anchor="middle">- 이벤트 소싱 (옵션)</text>
+
+    <rect class="component" x="1030" y="655" width="290" height="95"/>
+    <text class="title" x="1175" y="685" text-anchor="middle">External Tools</text>
+    <text class="subtitle" x="1175" y="705" text-anchor="middle">- Puppeteer (스크린샷)</text>
+    <text class="subtitle" x="1175" y="725" text-anchor="middle">- Canvas2PDF</text>
+
+    <!-- Arrows -->
+    <!-- UI to Application -->
+    <path class="arrow" d="M 590 230 L 590 260 L 180 260 L 180 320"/>
+    <path class="arrow" d="M 590 230 L 590 260 L 410 260 L 410 320"/>
+    <path class="arrow" d="M 590 230 L 590 260 L 640 260 L 640 320"/>
+
+    <!-- Application to Domain -->
+    <path class="arrow" d="M 180 440 L 180 470 L 160 470 L 160 535"/>
+    <path class="arrow" d="M 410 440 L 410 470 L 340 470 L 340 535"/>
+    <path class="arrow" d="M 640 440 L 640 470 L 545 470 L 545 535"/>
+
+    <!-- Domain to Infrastructure (through ports) -->
+    <path class="arrow" d="M 650 700 L 730 700"/>
+    <path class="arrow" d="M 650 680 L 700 680 L 700 595 L 730 595"/>
+    <path class="arrow" d="M 650 720 L 700 720 L 700 595 L 930 595"/>
+
+    <!-- Labels -->
+    <text class="arrow-label" x="500" y="250" text-anchor="middle">Commands / Queries</text>
+    <text class="arrow-label" x="350" y="460" text-anchor="middle">Domain Logic</text>
+    <text class="arrow-label" x="680" y="690" text-anchor="middle">Dependency Inversion</text>
+
+    <!-- Key Principles Box -->
+    <rect fill="#f0fdf4" stroke="#16a34a" stroke-width="2" rx="8" x="50" y="800" width="1300" height="170"/>
+    <text class="layer-title" x="70" y="825" fill="#16a34a">🔑 핵심 아키텍처 원칙</text>
+
+    <text class="subtitle" x="70" y="855" fill="#166534">✓ Hexagonal Architecture: 핵심 도메인이 외부 의존성과 완전히 분리</text>
+    <text class="subtitle" x="70" y="880" fill="#166534">✓ Dependency Inversion: 모든 의존성이 도메인을 향함 (인프라가 도메인에 의존)</text>
+    <text class="subtitle" x="70" y="905" fill="#166534">✓ CQRS Pattern: Command와 Query를 명확히 분리하여 단순성과 성능 최적화</text>
+    <text class="subtitle" x="70" y="930" fill="#166534">✓ 보안: Import 시 Schema Validation → Sanitization → Safe Parsing 3단계 검증</text>
+    <text class="subtitle" x="70" y="955" fill="#166534">✓ 기술 독립성: 도메인 로직은 Electron, React 등 UI 기술과 무관하게 테스트 가능</text>
+</svg>

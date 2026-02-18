@@ -5,6 +5,7 @@
     "module": "ESNext",
     "lib": ["ES2022"],
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -13,8 +14,9 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
+    "noEmit": true,
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "./",
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
@@ -22,8 +24,18 @@
       "@application/*": ["src/application/*"],
       "@infrastructure/*": ["src/infrastructure/*"],
       "@shared/*": ["src/shared/*"]
-    }
+    },
+    "types": [
+      "vitest/globals",
+      "node"
+    ]
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tests"]
+  "include": [
+    "src/**/*",
+    "tests/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

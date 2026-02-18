@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { EventId } from '../../../src/domain/value-objects/EventId';
-import { DomainError } from '../../../src/shared/errors/DomainError';
+import { EventId } from '@domain/value-objects/EventId';
+import { DomainError } from '@shared/errors/DomainError';
 
 describe('EventId (Value Object)', () => {
     describe('생성', () => {

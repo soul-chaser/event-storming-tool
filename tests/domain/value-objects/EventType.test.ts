@@ -1,7 +1,7 @@
 // tests/domain/value-objects/EventType.test.ts
 import { describe, it, expect } from 'vitest';
-import { EventType } from '../../../src/domain/value-objects/EventType';
-import { DomainError } from '../../../src/shared/errors/DomainError';
+import { EventType } from '@domain/value-objects/EventType';
+import { DomainError } from '@shared/errors/DomainError';
 
 describe('EventType (Value Object)', () => {
     describe('생성', () => {

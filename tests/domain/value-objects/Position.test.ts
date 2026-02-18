@@ -1,7 +1,7 @@
 // tests/domain/value-objects/Position.test.ts
 import { describe, it, expect } from 'vitest';
-import { Position } from '../../../src/domain/value-objects/Position';
-import { DomainError } from '../../../src/shared/errors/DomainError';
+import { Position } from '@domain/value-objects/Position';
+import { DomainError } from '@shared/errors/DomainError';
 
 describe('Position (Value Object)', () => {
     describe('생성', () => {

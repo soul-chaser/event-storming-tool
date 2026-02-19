@@ -3,36 +3,63 @@
   "version": "0.1.0",
   "description": "DDD Event Storming Tool with Hexagonal Architecture",
   "type": "module",
-  "main": "index.js",
-  "directories": {
-    "doc": "doc",
-    "test": "tests"
-  },
+  "main": "dist/presentation/electron/main.js",
   "scripts": {
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
     "test:ui": "vitest --ui",
     "test:domain": "vitest run tests/domain",
-    "dev": "ts-node src/index.ts",
-    "start": "node dist/index.js",
-    "build": "tsc",
-    "lint": "eslint src tests --ext .ts",
-    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\""
+    "build": "tsc && vite build",
+    "build:electron": "tsc",
+    "dev": "vite",
+    "electron:dev": "npm run build:electron && electron .",
+    "electron:build": "npm run build && electron-builder",
+    "lint": "eslint src tests --ext .ts,.tsx",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\""
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.17",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
+    "@vitejs/plugin-react": "^4.2.1",
     "@vitest/coverage-v8": "^1.0.4",
     "@vitest/ui": "^1.0.4",
+    "electron": "38.0.0-beta.6",
+    "electron-builder": "^24.9.1",
     "eslint": "9.26.0",
     "prettier": "^3.1.0",
     "typescript": "^5.3.2",
+    "vite": "^5.0.8",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^1.0.4"
+  },
+  "dependencies": {
+    "konva": "^9.3.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-konva": "^18.2.10"
+  },
+  "build": {
+    "appId": "com.eventstorming.tool",
+    "productName": "Event Storming Tool",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }

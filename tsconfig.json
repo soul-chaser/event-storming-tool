@@ -3,7 +3,8 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
+    "jsx": "react-jsx",
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "strict": true,
@@ -20,6 +21,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
+      "@presentation/*": ["src/presentation/*"],
       "@domain/*": ["src/domain/*"],
       "@application/*": ["src/application/*"],
       "@infrastructure/*": ["src/infrastructure/*"],

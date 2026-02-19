@@ -1,0 +1,63 @@
+import { contextBridge, ipcRenderer } from 'electron';
+
+/**
+ * Preload 스크립트
+ *
+ * 렌더러 프로세스에 안전한 API를 노출합니다.
+ */
+
+// ElectronAPI 타입 정의
+export interface ElectronAPI {
+    // Commands
+    createEvent: (args: {
+        boardId: string;
+        name: string;
+        type: string;
+        x: number;
+        y: number;
+        description?: string;
+    }) => Promise<void>;
+
+    moveEvent: (args: {
+        boardId: string;
+        eventId: string;
+        newX: number;
+        newY: number;
+    }) => Promise<void>;
+
+    deleteEvent: (args: {
+        boardId: string;
+        eventId: string;
+    }) => Promise<void>;
+
+    detectAggregates: (args: {
+        boardId: string;
+    }) => Promise<void>;
+
+    // Queries
+    getBoardState: (args: {
+        boardId: string;
+    }) => Promise<any>;
+
+    listBoards: () => Promise<string[]>;
+
+    createBoard: () => Promise<string>;
+}
+
+// API를 window 객체에 노출
+contextBridge.exposeInMainWorld('electronAPI', {
+    createEvent: (args) => ipcRenderer.invoke('create-event', args),
+    moveEvent: (args) => ipcRenderer.invoke('move-event', args),
+    deleteEvent: (args) => ipcRenderer.invoke('delete-event', args),
+    detectAggregates: (args) => ipcRenderer.invoke('detect-aggregates', args),
+    getBoardState: (args) => ipcRenderer.invoke('get-board-state', args),
+    listBoards: () => ipcRenderer.invoke('list-boards'),
+    createBoard: () => ipcRenderer.invoke('create-board'),
+} as ElectronAPI);
+
+// TypeScript 타입 선언
+declare global {
+    interface Window {
+        electronAPI: ElectronAPI;
+    }
+}

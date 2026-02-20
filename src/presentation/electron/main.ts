@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
-import { setupIPCHandlers } from './ipcHandlers';
+import { setupIPCHandlers } from './ipcHandlers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,7 +18,7 @@ export function createWindow(): BrowserWindow {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            preload: path.join(__dirname, 'preload.ts'),
+            preload: path.join(__dirname, 'preload.js'),
         },
     });
 
@@ -26,7 +26,11 @@ export function createWindow(): BrowserWindow {
     if (process.env.NODE_ENV === 'development') {
         mainWindow.loadURL('http://localhost:5173');
     } else {
-        mainWindow.loadFile(path.join(__dirname, '../react/dist/index.html'));
+        mainWindow.loadFile(path.join(__dirname, '../react/index.html'));
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+        mainWindow.webContents.openDevTools();
     }
 
     mainWindow.on('closed', () => {

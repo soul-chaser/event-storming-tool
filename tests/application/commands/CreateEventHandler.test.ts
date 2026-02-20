@@ -5,6 +5,7 @@ import { InMemoryEventRepository } from '@infrastructure/repositories/InMemoryEv
 import { EventStormingBoard } from '@domain/services/EventStormingBoard';
 import { BoardId } from '@domain/value-objects/BoardId';
 import { DomainError } from '@shared/errors/DomainError';
+import { Position } from '@domain/value-objects/Position';
 
 describe('CreateEventHandler', () => {
     let handler: CreateEventHandler;
@@ -74,5 +75,27 @@ describe('CreateEventHandler', () => {
         );
 
         await expect(handler.handle(command)).rejects.toThrow();
+    });
+
+    it('겹치는 위치로 생성 요청해도 근처 빈 위치에 자동 배치한다', async () => {
+        await handler.handle(
+            new CreateEventCommand(boardId, 'Event A', 'domain-event', 100, 200)
+        );
+        await handler.handle(
+            new CreateEventCommand(boardId, 'Event B', 'domain-event', 100, 200)
+        );
+
+        const board = await repository.load(new BoardId(boardId));
+        const events = board.getAllEvents();
+        expect(events.length).toBe(2);
+
+        const first = events.find((event) => event.name.value === 'Event A');
+        const second = events.find((event) => event.name.value === 'Event B');
+        expect(first).toBeDefined();
+        expect(second).toBeDefined();
+
+        const distance = first!.position.distanceTo(second!.position);
+        expect(distance).toBeGreaterThanOrEqual(50);
+        expect(second!.position.equals(new Position(100, 200))).toBe(false);
     });
 });

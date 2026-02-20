@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Stage, Layer, Rect, Text, Group } from 'react-konva';
 import { EventDTO, AggregateDTO, BoardState } from '../App';
 
@@ -19,6 +19,26 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
                                                                             onDeleteEvent,
                                                                         }) => {
     const stageRef = useRef(null);
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+
+    useEffect(() => {
+        const element = containerRef.current;
+        if (!element) return;
+
+        const resizeObserver = new ResizeObserver((entries) => {
+            const entry = entries[0];
+            if (!entry) return;
+            const { width, height } = entry.contentRect;
+            setStageSize({
+                width: Math.max(0, Math.floor(width)),
+                height: Math.max(0, Math.floor(height)),
+            });
+        });
+
+        resizeObserver.observe(element);
+        return () => resizeObserver.disconnect();
+    }, []);
 
     const handleStageClick = (e: any) => {
         // 빈 공간 클릭 시 이벤트 생성
@@ -40,10 +60,10 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
     };
 
     return (
-        <div className="canvas-container">
+        <div className="canvas-container" ref={containerRef}>
             <Stage
-                width={window.innerWidth}
-                height={window.innerHeight - 60}
+                width={stageSize.width}
+                height={stageSize.height}
                 ref={stageRef}
                 onClick={handleStageClick}
             >

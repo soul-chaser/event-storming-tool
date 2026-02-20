@@ -202,7 +202,7 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
                             isEditing={editingState?.eventId === event.id}
                             isSelected={selectedEventId === event.id}
                             onDragEnd={(e) => handleEventDragEnd(event.id, e)}
-                            onClick={() => onSelectEvent?.(event.id)}
+                            onSelect={() => onSelectEvent?.(event.id)}
                             onDoubleClick={() => handleEventRenameStart(event)}
                             onContextMenu={() => handleEventDelete(event.id)}
                         />
@@ -270,19 +270,21 @@ interface EventCardProps {
     isEditing: boolean;
     isSelected: boolean;
     onDragEnd: (e: any) => void;
-    onClick: () => void;
+    onSelect: () => void;
     onDoubleClick: () => void;
     onContextMenu: () => void;
 }
 
-const EventCard: React.FC<EventCardProps> = ({ event, dimensions, isEditing, isSelected, onDragEnd, onClick, onDoubleClick, onContextMenu }) => {
+const EventCard: React.FC<EventCardProps> = ({ event, dimensions, isEditing, isSelected, onDragEnd, onSelect, onDoubleClick, onContextMenu }) => {
     return (
         <Group
             x={event.position.x}
             y={event.position.y}
             draggable={!isEditing}
             onDragEnd={onDragEnd}
-            onClick={onClick}
+            onClick={onSelect}
+            onTap={onSelect}
+            onMouseDown={onSelect}
             onDblClick={onDoubleClick}
             onContextMenu={(e) => {
                 e.evt.preventDefault();

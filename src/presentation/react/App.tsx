@@ -58,6 +58,9 @@ function App() {
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
     const [pendingStoragePath, setPendingStoragePath] = useState<string>('');
     const [settingsError, setSettingsError] = useState<string>('');
+    const [isRenameModalOpen, setIsRenameModalOpen] = useState<boolean>(false);
+    const [pendingEventName, setPendingEventName] = useState<string>('');
+    const [renameError, setRenameError] = useState<string>('');
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
     const [undoStack, setUndoStack] = useState<string[]>([]);
     const [redoStack, setRedoStack] = useState<string[]>([]);
@@ -194,22 +197,45 @@ function App() {
         });
     };
 
-    const handleUpdateEventDescription = async () => {
-        if (!boardId || !boardState || !selectedEventId) return;
+    const handleRenameSelectedCard = async () => {
+        if (!boardId || !boardState || !selectedEventId) {
+            window.alert('먼저 이름을 변경할 이벤트 카드를 선택하세요.');
+            return;
+        }
 
         const selectedEvent = boardState.events.find((event) => event.id === selectedEventId);
-        if (!selectedEvent) return;
+        if (!selectedEvent) {
+            window.alert('선택된 이벤트를 찾을 수 없습니다. 다시 선택 후 시도하세요.');
+            return;
+        }
 
-        const input = window.prompt('이벤트 설명을 입력하세요.', selectedEvent.description ?? '');
-        if (input === null) return;
+        setPendingEventName(selectedEvent.name);
+        setRenameError('');
+        setIsRenameModalOpen(true);
+    };
+
+    const handleSaveCardName = async () => {
+        if (!boardId || !selectedEventId) {
+            setRenameError('선택된 이벤트가 없습니다.');
+            return;
+        }
+
+        const nextName = pendingEventName.trim();
+        if (!nextName) {
+            setRenameError('카드 이름은 비어 있을 수 없습니다.');
+            return;
+        }
 
         await runMutationWithHistory(async () => {
-            await window.electronAPI.updateEventDescription({
+            await window.electronAPI.renameEvent({
                 boardId,
                 eventId: selectedEventId,
-                description: input,
+                newName: nextName,
             });
         });
+
+        setIsRenameModalOpen(false);
+        setRenameError('');
     };
 
     const handleDetectAggregates = async () => {
@@ -448,8 +474,7 @@ function App() {
                 onRedo={handleRedo}
                 canUndo={undoStack.length > 0}
                 canRedo={redoStack.length > 0}
-                onEditDescription={handleUpdateEventDescription}
-                hasSelectedEvent={Boolean(selectedEventId)}
+                onRenameCard={handleRenameSelectedCard}
                 storagePath={storagePath}
                 onChangeStoragePath={handleChangeStoragePath}
             />
@@ -577,6 +602,28 @@ function App() {
                         <div className="modal-actions">
                             <button className="primary" onClick={handleSaveStoragePath}>저장</button>
                             <button className="secondary" onClick={() => setIsSettingsModalOpen(false)}>취소</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {isRenameModalOpen && (
+                <div className="modal-backdrop">
+                    <div className="modal settings-modal">
+                        <h2>카드 이름 변경</h2>
+                        <p className="modal-description">선택한 이벤트 카드의 이름을 변경합니다.</p>
+                        <div className="field-group">
+                            <label htmlFor="event-name-input">카드 이름</label>
+                            <textarea
+                                id="event-name-input"
+                                value={pendingEventName}
+                                onChange={(e) => setPendingEventName(e.currentTarget.value)}
+                                rows={4}
+                            />
+                        </div>
+                        {renameError && <p className="modal-error">{renameError}</p>}
+                        <div className="modal-actions">
+                            <button className="primary" onClick={handleSaveCardName}>저장</button>
+                            <button className="secondary" onClick={() => setIsRenameModalOpen(false)}>취소</button>
                         </div>
                     </div>
                 </div>

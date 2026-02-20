@@ -12,8 +12,7 @@ interface ToolbarProps {
     onRedo: () => void;
     canUndo: boolean;
     canRedo: boolean;
-    onEditDescription: () => void;
-    hasSelectedEvent: boolean;
+    onRenameCard: () => void;
     storagePath: string;
     onChangeStoragePath: () => void;
 }
@@ -28,8 +27,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                                                     onRedo,
                                                     canUndo,
                                                     canRedo,
-                                                    onEditDescription,
-                                                    hasSelectedEvent,
+                                                    onRenameCard,
                                                     storagePath,
                                                     onChangeStoragePath,
                                                 }) => {
@@ -70,10 +68,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 </button>
                 <button
                     className="action-button secondary"
-                    onClick={onEditDescription}
-                    disabled={!hasSelectedEvent}
+                    onClick={onRenameCard}
                 >
-                    이벤트 설명 편집
+                    카드 이름 변경
                 </button>
                 <button className="action-button secondary" onClick={onChangeStoragePath}>
                     저장 경로 변경

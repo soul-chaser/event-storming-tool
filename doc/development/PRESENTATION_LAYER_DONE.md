@@ -85,7 +85,7 @@ window.electronAPI.exportBoard(args);
 - ✅ 클릭으로 이벤트 생성
 - ✅ 드래그로 이벤트 이동
 - ✅ 더블클릭으로 이벤트 이름 편집
-- ✅ 선택 이벤트 설명 편집
+- ✅ 선택 이벤트 카드 이름 변경 (모달, 멀티라인 입력)
 - ✅ 우클릭으로 이벤트 삭제
 - ✅ Undo/Redo (스냅샷 기반)
 - ✅ Aggregate 자동 감지
@@ -287,7 +287,7 @@ npm run test:e2e
 - [x] Export (Mermaid, PlantUML, PDF, PNG)
 - [x] Import (JSON 파일 검증)
 - [x] Undo/Redo
-- [x] 이벤트 설명 편집
+- [x] 카드 이름 변경
 - [x] 키보드 단축키
 
 ### 개선사항

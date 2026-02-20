@@ -162,7 +162,22 @@ body {
     font-size: 14px;
 }
 
+.field-group textarea {
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+    resize: vertical;
+    min-height: 120px;
+    font-family: inherit;
+}
+
 .field-group input:focus {
+    border-color: #0284c7;
+    outline: 2px solid rgba(2, 132, 199, 0.15);
+}
+
+.field-group textarea:focus {
     border-color: #0284c7;
     outline: 2px solid rgba(2, 132, 199, 0.15);
 }

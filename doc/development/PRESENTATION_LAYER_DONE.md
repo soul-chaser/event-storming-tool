@@ -1,11 +1,12 @@
-# Presentation Layer 완성! 🎉
+# Presentation Layer 현행화 (2026-02) ✅
 
 ## ✅ 완료 항목
 
-### Electron (3개)
+### Electron (4개)
 - ✅ main.ts (메인 프로세스)
 - ✅ preload.ts (보안 브리지)
 - ✅ ipcHandlers.ts (IPC 통신)
+- ✅ AppConfigStore.ts (설정 저장소)
 
 ### React Components (3개)
 - ✅ App.tsx (메인 컴포넌트)
@@ -23,7 +24,8 @@ src/presentation/
 ├── electron/
 │   ├── main.ts              # Electron 메인 프로세스
 │   ├── preload.ts           # 보안 브리지
-│   └── ipcHandlers.ts       # IPC 핸들러
+│   ├── ipcHandlers.ts       # IPC 핸들러
+│   └── AppConfigStore.ts    # ~/.event_storming_tool/.config 관리
 └── react/
     ├── App.tsx              # 메인 컴포넌트
     ├── App.css
@@ -80,8 +82,11 @@ window.electronAPI.getBoardState(args);
 ### 4. 사용자 인터랙션
 - ✅ 클릭으로 이벤트 생성
 - ✅ 드래그로 이벤트 이동
-- ✅ 더블클릭으로 이벤트 삭제
+- ✅ 더블클릭으로 이벤트 이름 편집
+- ✅ 우클릭으로 이벤트 삭제
 - ✅ Aggregate 자동 감지
+- ✅ 시작 모달(기존 보드 선택 / 신규 생성)
+- ✅ 설정 모달(저장 경로 변경)
 
 ## 🎨 UI 구성
 
@@ -103,10 +108,14 @@ window.electronAPI.getBoardState(args);
 │ │Detect Agg.  │ │
 │ └─────────────┘ │
 │                 │
+│ Settings        │
+│ • Storage Path  │
+│                 │
 │ Help            │
 │ • Click: Create │
 │ • Drag: Move    │
-│ • DblClick: Del │
+│ • DblClick: Ren │
+│ • RightClick Del│
 └─────────────────┘
 ```
 
@@ -194,9 +203,11 @@ App
 
 ## 💡 사용 시나리오
 
-### 1. 새 보드 시작
+### 1. 앱 시작
 ```
-앱 실행 → 자동으로 새 보드 생성
+앱 실행
+→ 기존 보드가 있으면 선택 모달 표시
+→ 없으면 신규 보드 이름 입력 모달 표시
 ```
 
 ### 2. 이벤트 추가
@@ -217,7 +228,14 @@ App
 
 ### 5. 이벤트 삭제
 ```
-이벤트 카드 더블클릭 → 확인 → 삭제
+이벤트 카드 우클릭 → 확인 → 삭제
+```
+
+### 6. 저장 경로 변경
+```
+Toolbar > 저장 경로 변경
+→ 설정 모달에서 새 경로 입력
+→ 저장 후 해당 경로의 보드 목록을 다시 표시
 ```
 
 ## 🧪 테스트
@@ -247,8 +265,7 @@ npm run test:e2e
 - [ ] Export (Mermaid, PlantUML, PDF, PNG)
 - [ ] Import (JSON 파일 검증)
 - [ ] Undo/Redo
-- [ ] 이벤트 편집 (이름, 설명)
-- [ ] 보드 저장/로드 UI
+- [ ] 이벤트 설명 편집
 - [ ] 키보드 단축키
 
 ### 개선사항

@@ -6,12 +6,16 @@ interface ToolbarProps {
     selectedTool: string;
     onToolChange: (tool: string) => void;
     onDetectAggregates: () => void;
+    storagePath: string;
+    onChangeStoragePath: () => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
                                                     selectedTool,
                                                     onToolChange,
                                                     onDetectAggregates,
+                                                    storagePath,
+                                                    onChangeStoragePath,
                                                 }) => {
     return (
         <div className="toolbar">
@@ -39,6 +43,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 <button className="action-button" onClick={onDetectAggregates}>
                     Detect Aggregates
                 </button>
+                <button className="action-button secondary" onClick={onChangeStoragePath}>
+                    저장 경로 변경
+                </button>
+            </div>
+
+            <div className="toolbar-section">
+                <h3>Storage</h3>
+                <p className="storage-path">{storagePath || '-'}</p>
             </div>
 
             <div className="toolbar-section">

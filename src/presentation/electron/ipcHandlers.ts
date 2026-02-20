@@ -3,12 +3,14 @@ import { ipcMain } from 'electron';
 import { CreateEventHandler } from '@core/application/commands/CreateEventHandler.js';
 import { MoveEventHandler } from '@core/application/commands/MoveEventHandler.js';
 import { DeleteEventHandler } from '@core/application/commands/DeleteEventHandler.js';
+import { RenameEventHandler } from '@core/application/commands/RenameEventHandler.js';
 import { DetectAggregatesHandler } from '@core/application/commands/DetectAggregatesHandler.js';
 import { GetBoardStateHandler } from '@core/application/queries/GetBoardStateHandler.js';
 
 import { CreateEventCommand } from '@core/application/commands/CreateEventCommand.js';
 import { MoveEventCommand } from '@core/application/commands/MoveEventCommand.js';
 import { DeleteEventCommand } from '@core/application/commands/DeleteEventCommand.js';
+import { RenameEventCommand } from '@core/application/commands/RenameEventCommand.js';
 import { DetectAggregatesCommand } from '@core/application/commands/DetectAggregatesCommand.js';
 import { GetBoardStateQuery } from '@core/application/queries/GetBoardStateQuery.js';
 
@@ -25,6 +27,7 @@ const repository = new FileSystemBoardRepository(dataPath);
 const createEventHandler = new CreateEventHandler(repository as any);
 const moveEventHandler = new MoveEventHandler(repository as any);
 const deleteEventHandler = new DeleteEventHandler(repository as any);
+const renameEventHandler = new RenameEventHandler(repository as any);
 const detectAggregatesHandler = new DetectAggregatesHandler(repository as any);
 const getBoardStateHandler = new GetBoardStateHandler(repository as any);
 
@@ -54,6 +57,11 @@ export function setupIPCHandlers(): void {
     ipcMain.handle('delete-event', async (_event, args) => {
         const command = new DeleteEventCommand(args.boardId, args.eventId);
         await deleteEventHandler.handle(command);
+    });
+
+    ipcMain.handle('rename-event', async (_event, args) => {
+        const command = new RenameEventCommand(args.boardId, args.eventId, args.newName);
+        await renameEventHandler.handle(command);
     });
 
     ipcMain.handle('detect-aggregates', async (_event, args) => {

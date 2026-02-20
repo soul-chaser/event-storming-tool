@@ -1,11 +1,13 @@
 import { BoardId } from '../value-objects/BoardId';
 import { Event } from '../entities/Event';
 import { EventId } from '../value-objects/EventId';
+import { EventName } from '../value-objects/EventName';
 import { EventType } from '../value-objects/EventType';
 import { Position } from '../value-objects/Position';
 import { Aggregate } from '../entities/Aggregate';
 import { AggregateName } from '../value-objects/AggregateName';
 import { DomainError } from '@shared/errors/DomainError';
+import { getEventCardDimensions } from '@shared/utils/eventCardLayout';
 
 /**
  * EventStormingBoard Domain Service
@@ -65,7 +67,7 @@ export class EventStormingBoard {
         }
 
         // 비즈니스 규칙 검증: 위치 겹침 체크
-        if (this.hasOverlappingEvent(event.position)) {
+        if (this.hasOverlappingEvent(event.position, undefined, event.name.value)) {
             throw new DomainError('Event position overlaps with existing event');
         }
 
@@ -116,12 +118,28 @@ export class EventStormingBoard {
         }
 
         // 비즈니스 규칙 검증: 위치 겹침 (자기 자신 제외)
-        if (this.hasOverlappingEvent(newPosition, eventId)) {
+        if (this.hasOverlappingEvent(newPosition, eventId, event.name.value)) {
             throw new DomainError('Event position overlaps with existing event');
         }
 
         // Event의 moveTo 메서드 호출 (보드 경계 검증 포함)
         event.moveTo(newPosition);
+    }
+
+    /**
+     * 이벤트의 이름을 변경합니다.
+     *
+     * @param eventId - 이름을 변경할 이벤트의 ID
+     * @param newName - 새로운 이벤트 이름
+     * @throws DomainError - 이벤트가 존재하지 않는 경우
+     */
+    renameEvent(eventId: EventId, newName: EventName): void {
+        const event = this._events.get(eventId.value);
+        if (!event) {
+            throw new DomainError('Event not found on board');
+        }
+
+        event.changeName(newName);
     }
 
     /**
@@ -168,19 +186,43 @@ export class EventStormingBoard {
      * @param excludeEventId - 제외할 이벤트 ID (선택)
      * @returns 겹치는 이벤트가 있으면 true
      */
-    hasOverlappingEvent(position: Position, excludeEventId?: EventId): boolean {
+    hasOverlappingEvent(position: Position, excludeEventId?: EventId, candidateName = 'New Event'): boolean {
+        const candidateBounds = this.getBounds(position, candidateName);
+
         for (const event of this._events.values()) {
             // 제외할 이벤트는 건너뜀
             if (excludeEventId && event.id.equals(excludeEventId)) {
                 continue;
             }
 
-            const distance = event.position.distanceTo(position);
-            if (distance < MIN_EVENT_DISTANCE) {
+            const existingBounds = this.getBounds(event.position, event.name.value);
+
+            const isSeparated =
+                candidateBounds.right <= existingBounds.left ||
+                candidateBounds.left >= existingBounds.right ||
+                candidateBounds.bottom <= existingBounds.top ||
+                candidateBounds.top >= existingBounds.bottom;
+
+            if (!isSeparated) {
                 return true;
             }
         }
         return false;
+    }
+
+    private getBounds(position: Position, eventName: string): {
+        left: number;
+        top: number;
+        right: number;
+        bottom: number;
+    } {
+        const dimensions = getEventCardDimensions(eventName);
+        return {
+            left: position.x,
+            top: position.y,
+            right: position.x + dimensions.width,
+            bottom: position.y + dimensions.height,
+        };
     }
 
     /**

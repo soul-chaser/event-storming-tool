@@ -22,7 +22,7 @@ export class CreateEventHandler {
         const boardId = new BoardId(command.boardId);
         const board = await this.repository.load(boardId);
         const requestedPosition = new Position(command.x, command.y);
-        const availablePosition = this.findAvailablePosition(board, requestedPosition);
+        const availablePosition = this.findAvailablePosition(board, requestedPosition, command.name);
 
         // 2. 도메인 객체 생성
         const event = Event.create({
@@ -41,9 +41,10 @@ export class CreateEventHandler {
 
     private findAvailablePosition(
         board: EventStormingBoard,
-        requestedPosition: Position
+        requestedPosition: Position,
+        eventName: string
     ): Position {
-        if (!board.hasOverlappingEvent(requestedPosition)) {
+        if (!board.hasOverlappingEvent(requestedPosition, undefined, eventName)) {
             return requestedPosition;
         }
 
@@ -82,7 +83,7 @@ export class CreateEventHandler {
                 }
 
                 const position = new Position(candidate.x, candidate.y);
-                if (!board.hasOverlappingEvent(position)) {
+                if (!board.hasOverlappingEvent(position, undefined, eventName)) {
                     return position;
                 }
             }

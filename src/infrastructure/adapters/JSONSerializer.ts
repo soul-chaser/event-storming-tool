@@ -3,7 +3,7 @@ import { BoardId } from '@domain/value-objects/BoardId';
 import { Event } from '@domain/entities/Event';
 import { EventName } from '@domain/value-objects/EventName';
 import { EventType } from '@domain/value-objects/EventType';
-import { Position } from '@domain/value-objects/Position';
+import { Position, BOARD_CONSTANTS } from '@domain/value-objects/Position';
 
 /**
  * JSONSerializer
@@ -77,6 +77,12 @@ export class JSONSerializer {
         // 이벤트 복원
         for (const eventJSON of data.events) {
             const event = this.deserializeEvent(eventJSON);
+            const availablePosition = this.findAvailablePosition(board, event.position, event.name.value);
+
+            if (!event.position.equals(availablePosition)) {
+                event.moveTo(availablePosition);
+            }
+
             board.addEvent(event);
         }
 
@@ -114,5 +120,67 @@ export class JSONSerializer {
             createdAt: json.createdAt,
             lastModified: json.lastModified,
         });
+    }
+
+    private findAvailablePosition(
+        board: EventStormingBoard,
+        requestedPosition: Position,
+        eventName: string
+    ): Position {
+        if (!board.hasOverlappingEvent(requestedPosition, undefined, eventName)) {
+            return requestedPosition;
+        }
+
+        const step = 60;
+        const maxRing = 60;
+
+        for (let ring = 1; ring <= maxRing; ring++) {
+            const distance = ring * step;
+            const candidates: Array<{ x: number; y: number }> = [];
+
+            for (let dx = -ring; dx <= ring; dx++) {
+                candidates.push({
+                    x: requestedPosition.x + (dx * step),
+                    y: requestedPosition.y - distance,
+                });
+                candidates.push({
+                    x: requestedPosition.x + (dx * step),
+                    y: requestedPosition.y + distance,
+                });
+            }
+
+            for (let dy = -(ring - 1); dy <= ring - 1; dy++) {
+                candidates.push({
+                    x: requestedPosition.x - distance,
+                    y: requestedPosition.y + (dy * step),
+                });
+                candidates.push({
+                    x: requestedPosition.x + distance,
+                    y: requestedPosition.y + (dy * step),
+                });
+            }
+
+            for (const candidate of candidates) {
+                if (!this.isWithinBoard(candidate.x, candidate.y)) {
+                    continue;
+                }
+
+                const position = new Position(candidate.x, candidate.y);
+                if (!board.hasOverlappingEvent(position, undefined, eventName)) {
+                    return position;
+                }
+            }
+        }
+
+        return requestedPosition;
+    }
+
+    private isWithinBoard(x: number, y: number): boolean {
+        return (
+            x >= 0 &&
+            y >= 0 &&
+            x <= BOARD_CONSTANTS.MAX_WIDTH &&
+            y <= BOARD_CONSTANTS.MAX_HEIGHT
+        );
     }
 }

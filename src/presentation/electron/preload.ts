@@ -30,6 +30,12 @@ export interface ElectronAPI {
         eventId: string;
     }) => Promise<void>;
 
+    renameEvent: (args: {
+        boardId: string;
+        eventId: string;
+        newName: string;
+    }) => Promise<void>;
+
     detectAggregates: (args: {
         boardId: string;
     }) => Promise<void>;
@@ -49,6 +55,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     createEvent: (args) => ipcRenderer.invoke('create-event', args),
     moveEvent: (args) => ipcRenderer.invoke('move-event', args),
     deleteEvent: (args) => ipcRenderer.invoke('delete-event', args),
+    renameEvent: (args) => ipcRenderer.invoke('rename-event', args),
     detectAggregates: (args) => ipcRenderer.invoke('detect-aggregates', args),
     getBoardState: (args) => ipcRenderer.invoke('get-board-state', args),
     listBoards: () => ipcRenderer.invoke('list-boards'),

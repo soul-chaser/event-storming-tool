@@ -96,6 +96,38 @@ describe('JSONSerializer', () => {
 
             expect(() => serializer.deserialize(json)).toThrow();
         });
+
+        it('겹치는 이벤트가 있어도 로드 시 자동 재배치한다', () => {
+            const boardId = BoardId.generate().value;
+            const json = JSON.stringify({
+                version: '1.0',
+                boardId,
+                events: [
+                    {
+                        id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+                        name: '이벤트1',
+                        type: 'domain-event',
+                        position: { x: 100, y: 200 },
+                        createdAt: new Date().toISOString(),
+                        lastModified: new Date().toISOString(),
+                    },
+                    {
+                        id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12',
+                        name: '이벤트2',
+                        type: 'domain-event',
+                        position: { x: 100, y: 200 },
+                        createdAt: new Date().toISOString(),
+                        lastModified: new Date().toISOString(),
+                    },
+                ],
+            });
+
+            const restored = serializer.deserialize(json);
+            expect(restored.getEventCount()).toBe(2);
+
+            const events = restored.getAllEvents();
+            expect(events[0].position.equals(events[1].position)).toBe(false);
+        });
     });
 
     describe('round-trip', () => {
@@ -111,7 +143,7 @@ describe('JSONSerializer', () => {
             const event2 = Event.create({
                 name: new EventName('사용자 등록됨'),
                 type: new EventType('domain-event'),
-                position: new Position(200, 200),
+                position: new Position(260, 200),
             });
 
             board.addEvent(event1);

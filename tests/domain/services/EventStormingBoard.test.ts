@@ -98,7 +98,7 @@ describe('EventStormingBoard (Domain Service)', () => {
             const event2 = Event.create({
                 name: new EventName('이벤트2'),
                 type: new EventType('command'),
-                position: new Position(200, 200),
+                position: new Position(260, 200),
             });
 
             board.addEvent(event1);
@@ -189,6 +189,51 @@ describe('EventStormingBoard (Domain Service)', () => {
         });
     });
 
+    describe('renameEvent', () => {
+        let event: Event;
+
+        beforeEach(() => {
+            event = Event.create({
+                name: new EventName('사용자 등록됨'),
+                type: new EventType('domain-event'),
+                position: new Position(100, 200),
+            });
+            board.addEvent(event);
+        });
+
+        it('이벤트 이름을 변경할 수 있다', () => {
+            board.renameEvent(event.id, new EventName('회원 가입 완료'));
+
+            const renamedEvent = board.getEvent(event.id);
+            expect(renamedEvent?.name.value).toBe('회원 가입 완료');
+        });
+
+        it('존재하지 않는 이벤트 이름 변경 시 DomainError를 발생시킨다', () => {
+            const nonExistentId = Event.create({
+                name: new EventName('없는 이벤트'),
+                type: new EventType('domain-event'),
+                position: new Position(300, 300),
+            }).id;
+
+            expect(() => board.renameEvent(nonExistentId, new EventName('새 이름'))).toThrow(DomainError);
+            expect(() => board.renameEvent(nonExistentId, new EventName('새 이름'))).toThrow('Event not found on board');
+        });
+
+        it('이름 변경으로 카드가 겹쳐도 이름 변경을 허용한다', () => {
+            const secondEvent = Event.create({
+                name: new EventName('짧은 이름'),
+                type: new EventType('domain-event'),
+                position: new Position(260, 200),
+            });
+            board.addEvent(secondEvent);
+
+            expect(() => board.renameEvent(
+                event.id,
+                new EventName('아주아주아주아주아주아주아주아주아주아주아주아주 긴 이름')
+            )).not.toThrow();
+        });
+    });
+
     describe('getEvent', () => {
         it('ID로 이벤트를 조회할 수 있다', () => {
             const event = Event.create({
@@ -225,7 +270,7 @@ describe('EventStormingBoard (Domain Service)', () => {
             const userEvent2 = Event.create({
                 name: new EventName('사용자 등록됨'),
                 type: new EventType('domain-event'),
-                position: new Position(150, 200),
+                position: new Position(260, 200),
             });
 
             // 클러스터 2: Order 관련 (멀리 떨어짐)
@@ -237,7 +282,7 @@ describe('EventStormingBoard (Domain Service)', () => {
             const orderEvent2 = Event.create({
                 name: new EventName('주문 생성됨'),
                 type: new EventType('domain-event'),
-                position: new Position(1050, 200),
+                position: new Position(1160, 200),
             });
 
             board.addEvent(userEvent1);
@@ -296,7 +341,7 @@ describe('EventStormingBoard (Domain Service)', () => {
             const event2 = Event.create({
                 name: new EventName('이벤트2'),
                 type: new EventType('domain-event'),
-                position: new Position(150, 200),
+                position: new Position(260, 200),
             });
 
             board.addEvent(event1);
@@ -318,7 +363,7 @@ describe('EventStormingBoard (Domain Service)', () => {
             const domainEvent = Event.create({
                 name: new EventName('사용자 등록됨'),
                 type: new EventType('domain-event'),
-                position: new Position(200, 200),
+                position: new Position(260, 200),
             });
 
             board.addEvent(command);
@@ -363,12 +408,12 @@ describe('EventStormingBoard (Domain Service)', () => {
             board.addEvent(Event.create({
                 name: new EventName('사용자 등록됨'),
                 type: new EventType('domain-event'),
-                position: new Position(200, 200),
+                position: new Position(260, 200),
             }));
             board.addEvent(Event.create({
                 name: new EventName('주문 생성됨'),
                 type: new EventType('domain-event'),
-                position: new Position(300, 200),
+                position: new Position(420, 200),
             }));
         });
 
@@ -397,7 +442,7 @@ describe('EventStormingBoard (Domain Service)', () => {
             const event3 = Event.create({
                 name: new EventName('이벤트3'),
                 type: new EventType('domain-event'),
-                position: new Position(300, 200),
+                position: new Position(420, 200),
             });
             const event1 = Event.create({
                 name: new EventName('이벤트1'),
@@ -407,7 +452,7 @@ describe('EventStormingBoard (Domain Service)', () => {
             const event2 = Event.create({
                 name: new EventName('이벤트2'),
                 type: new EventType('domain-event'),
-                position: new Position(200, 200),
+                position: new Position(260, 200),
             });
 
             board.addEvent(event3);
@@ -438,7 +483,7 @@ describe('EventStormingBoard (Domain Service)', () => {
             board.addEvent(Event.create({
                 name: new EventName('이벤트2'),
                 type: new EventType('domain-event'),
-                position: new Position(200, 200),
+                position: new Position(260, 200),
             }));
 
             board.detectAggregates();

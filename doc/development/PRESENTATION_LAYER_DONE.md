@@ -85,9 +85,13 @@ window.electronAPI.exportBoard(args);
 - ✅ 클릭으로 이벤트 생성
 - ✅ 드래그로 이벤트 이동
 - ✅ 더블클릭으로 이벤트 이름 편집
+- ✅ 선택 이벤트 설명 편집
 - ✅ 우클릭으로 이벤트 삭제
+- ✅ Undo/Redo (스냅샷 기반)
 - ✅ Aggregate 자동 감지
 - ✅ Export (Mermaid, PlantUML, PDF, PNG)
+- ✅ Import (JSON 파일 검증)
+- ✅ 키보드 단축키 (Cmd/Ctrl+I, Cmd/Ctrl+Z/Y, Cmd/Ctrl+1~6)
 - ✅ 시작 모달(기존 보드 선택 / 신규 생성)
 - ✅ 설정 모달(저장 경로 변경)
 
@@ -281,10 +285,10 @@ npm run test:e2e
 
 ### 추가 기능
 - [x] Export (Mermaid, PlantUML, PDF, PNG)
-- [ ] Import (JSON 파일 검증)
-- [ ] Undo/Redo
-- [ ] 이벤트 설명 편집
-- [ ] 키보드 단축키
+- [x] Import (JSON 파일 검증)
+- [x] Undo/Redo
+- [x] 이벤트 설명 편집
+- [x] 키보드 단축키
 
 ### 개선사항
 - [ ] E2E 테스트 (Playwright)

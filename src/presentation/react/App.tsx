@@ -306,7 +306,10 @@ function App() {
                 return;
             }
 
-            const imported = await window.electronAPI.importBoardJSON({ filePath });
+            const imported = await window.electronAPI.importBoardJSON({
+                filePath,
+                targetBoardId: boardId || undefined,
+            });
             const listedBoards = await window.electronAPI.listBoards();
             setBoards(listedBoards);
             setBoardId(imported.boardId);
@@ -319,7 +322,7 @@ function App() {
             console.error('Failed to import board:', error);
             window.alert('JSON import에 실패했습니다. 파일 형식을 확인하세요.');
         }
-    }, [loadBoardState, resetHistory]);
+    }, [boardId, loadBoardState, resetHistory]);
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {

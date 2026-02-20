@@ -144,9 +144,18 @@ export function setupIPCHandlers(): void {
         return result.filePaths[0];
     });
 
-    ipcMain.handle('import-board-json', async (_event, args: { filePath: string; boardName?: string }) => {
+    ipcMain.handle('import-board-json', async (_event, args: { filePath: string; boardName?: string; targetBoardId?: string }) => {
         const repo = await getRepository();
         const raw = await readFile(args.filePath, 'utf-8');
+
+        if (args.targetBoardId) {
+            const parsed = JSON.parse(raw) as Record<string, unknown>;
+            parsed.boardId = args.targetBoardId;
+            const board = serializer.deserialize(JSON.stringify(parsed));
+            await repo.save(board);
+            return { boardId: args.targetBoardId };
+        }
+
         const board = serializer.deserialize(raw);
         const fallbackName = path.basename(args.filePath, path.extname(args.filePath));
         await repo.registerBoardName(board.id, args.boardName ?? fallbackName);

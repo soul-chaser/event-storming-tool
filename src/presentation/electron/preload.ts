@@ -9,7 +9,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 // ElectronAPI 타입 정의
 export interface ElectronAPI {
     chooseImportPath: () => Promise<string | null>;
-    importBoardJSON: (args: { filePath: string; boardName?: string }) => Promise<{ boardId: string }>;
+    importBoardJSON: (args: { filePath: string; boardName?: string; targetBoardId?: string }) => Promise<{ boardId: string }>;
     getBoardSnapshot: (args: { boardId: string }) => Promise<string>;
     replaceBoardSnapshot: (args: { boardId: string; snapshot: string }) => Promise<void>;
     chooseExportPath: (args: {

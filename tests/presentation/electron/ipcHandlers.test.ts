@@ -91,6 +91,41 @@ describe('ipcHandlers', () => {
         ]));
     });
 
+    it('import-board-json은 targetBoardId가 있으면 현재 보드 내용을 덮어쓴다', async () => {
+        const currentBoardId = await handlerMap['create-board']({}, { name: '현재 보드' });
+        await handlerMap['create-event']({}, {
+            boardId: currentBoardId,
+            name: '기존 카드',
+            type: 'domain-event',
+            x: 100,
+            y: 120,
+        });
+
+        const importedBoard = EventStormingBoard.create(BoardId.generate());
+        importedBoard.addEvent(Event.create({
+            name: new EventName('가져온 카드'),
+            type: new EventType('command'),
+            position: new Position(300, 400),
+            description: 'imported',
+        }));
+
+        const serializer = new JSONSerializer();
+        const filePath = path.join(tempDir, 'overwrite-import.json');
+        await fs.writeFile(filePath, serializer.serialize(importedBoard), 'utf-8');
+
+        const result = await handlerMap['import-board-json']({}, {
+            filePath,
+            targetBoardId: currentBoardId,
+        });
+        const boardState = await handlerMap['get-board-state']({}, { boardId: currentBoardId });
+
+        expect(result.boardId).toBe(currentBoardId);
+        expect(boardState.events).toHaveLength(1);
+        expect(boardState.events[0].name).toBe('가져온 카드');
+        expect(boardState.events[0].type).toBe('command');
+        expect(boardState.events[0].position).toEqual({ x: 300, y: 400 });
+    });
+
     it('replace-board-snapshot은 boardId가 다른 스냅샷을 거부한다', async () => {
         const createdBoardId = await handlerMap['create-board']({}, { name: 'undo target' });
 

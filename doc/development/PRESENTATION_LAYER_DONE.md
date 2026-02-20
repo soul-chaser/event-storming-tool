@@ -90,8 +90,8 @@ window.electronAPI.exportBoard(args);
 - ✅ Undo/Redo (스냅샷 기반)
 - ✅ Aggregate 자동 감지
 - ✅ Export (Mermaid, PlantUML, PDF, PNG)
-- ✅ Import (JSON 파일 검증)
-- ✅ 키보드 단축키 (Cmd/Ctrl+I, Cmd/Ctrl+Z/Y, Cmd/Ctrl+1~6)
+- ✅ Import (JSON 파일 검증, 현재 보드 덮어쓰기 지원)
+- ✅ 키보드 단축키 (Cmd/Ctrl+I, Cmd/Ctrl+Z/Y, Cmd/Ctrl+E, Cmd/Ctrl+1~6)
 - ✅ 시작 모달(기존 보드 선택 / 신규 생성)
 - ✅ 설정 모달(저장 경로 변경)
 
@@ -258,6 +258,13 @@ Toolbar > 저장 경로 변경
 Toolbar > Export 형식 선택
 → 저장 경로 선택
 → Mermaid(.mmd) / PlantUML(.puml) / PDF(.pdf) / PNG(.png)로 저장
+```
+
+### 8. Board JSON Import
+```
+Toolbar > Import JSON
+→ JSON 파일 선택
+→ 현재 열려 있는 보드 JSON 파일 내용을 import 파일 내용으로 덮어써서 저장
 ```
 
 ## 🧪 테스트

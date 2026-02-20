@@ -15,6 +15,10 @@ export class GetBoardStateHandler {
             id: board.id.value,
             events: board.getAllEvents().map(e => this.toEventDTO(e)),
             aggregates: board.getAllAggregates().map(a => this.toAggregateDTO(a)),
+            connections: board.getAllConnections().map((connection) => ({
+                sourceId: connection.sourceId,
+                targetId: connection.targetId,
+            })),
         };
     }
 

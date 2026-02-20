@@ -145,4 +145,28 @@ describe('GetBoardStateHandler', () => {
         expect(state.events).toHaveLength(4);
         expect(state.aggregates.length).toBeGreaterThan(0);
     });
+
+    it('카드 연결선 정보를 조회할 수 있다', async () => {
+        await createHandler.handle(
+            new CreateEventCommand(boardId, '주문 생성', 'command', 100, 200)
+        );
+        await createHandler.handle(
+            new CreateEventCommand(boardId, '주문 생성됨', 'domain-event', 300, 200)
+        );
+
+        const updated = await repository.load(new BoardId(boardId));
+        const [first, second] = updated.getAllEvents();
+        updated.addConnection(first.id, second.id);
+        await repository.save(updated);
+
+        const query = new GetBoardStateQuery(boardId);
+        const state = await handler.handle(query);
+
+        expect(state.connections).toEqual([
+            {
+                sourceId: first.id.value,
+                targetId: second.id.value,
+            },
+        ]);
+    });
 });

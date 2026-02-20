@@ -12,6 +12,7 @@ export interface BoardStateDTO {
     id: string;
     events: EventDTO[];
     aggregates: AggregateDTO[];
+    connections: CardConnectionDTO[];
 }
 
 export interface EventDTO {
@@ -35,4 +36,9 @@ export interface AggregateDTO {
         minY: number;
         maxY: number;
     };
+}
+
+export interface CardConnectionDTO {
+    sourceId: string;
+    targetId: string;
 }

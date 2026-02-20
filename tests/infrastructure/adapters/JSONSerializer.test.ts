@@ -158,5 +158,34 @@ describe('JSONSerializer', () => {
             expect(events[0].description).toBe('신규 사용자');
             expect(events[1].name.value).toBe('사용자 등록됨');
         });
+
+        it('연결선 정보가 직렬화/역직렬화에서 유지된다', () => {
+            const board = EventStormingBoard.create(BoardId.generate());
+
+            const source = Event.create({
+                name: new EventName('주문 생성'),
+                type: new EventType('command'),
+                position: new Position(100, 200),
+            });
+            const target = Event.create({
+                name: new EventName('주문 생성됨'),
+                type: new EventType('domain-event'),
+                position: new Position(320, 200),
+            });
+
+            board.addEvent(source);
+            board.addEvent(target);
+            board.addConnection(source.id, target.id);
+
+            const json = serializer.serialize(board);
+            const restored = serializer.deserialize(json);
+
+            expect(restored.getAllConnections()).toEqual([
+                {
+                    sourceId: source.id.value,
+                    targetId: target.id.value,
+                },
+            ]);
+        });
     });
 });

@@ -15,6 +15,7 @@ interface BoardJSON {
     version: string;
     boardId: string;
     events: EventJSON[];
+    connections?: CardConnectionJSON[];
 }
 
 interface EventJSON {
@@ -25,6 +26,11 @@ interface EventJSON {
     description?: string;
     createdAt: string;
     lastModified: string;
+}
+
+interface CardConnectionJSON {
+    sourceId: string;
+    targetId: string;
 }
 
 const SUPPORTED_VERSION = '1.0';
@@ -41,6 +47,10 @@ export class JSONSerializer {
             version: SUPPORTED_VERSION,
             boardId: board.id.value,
             events: board.getAllEvents().map(e => this.serializeEvent(e)),
+            connections: board.getAllConnections().map((connection) => ({
+                sourceId: connection.sourceId,
+                targetId: connection.targetId,
+            })),
         };
 
         return JSON.stringify(boardJSON, null, 2);
@@ -84,6 +94,15 @@ export class JSONSerializer {
             }
 
             board.addEvent(event);
+        }
+
+        for (const connection of data.connections ?? []) {
+            const source = board.getAllEvents().find((event) => event.id.value === connection.sourceId);
+            const target = board.getAllEvents().find((event) => event.id.value === connection.targetId);
+            if (!source || !target) {
+                continue;
+            }
+            board.addConnection(source.id, target.id);
         }
 
         return board;

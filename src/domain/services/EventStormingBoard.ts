@@ -31,16 +31,37 @@ export interface ValidationResult {
     errors: string[];
 }
 
+export interface CardConnection {
+    sourceId: string;
+    targetId: string;
+}
+
 export class EventStormingBoard {
     private readonly _id: BoardId;
     private _events: Map<string, Event>;
     private _aggregates: Aggregate[];
+    private _connections: CardConnection[];
 
-    constructor(id: BoardId, events: Event[] = [], aggregates: Aggregate[] = []) {
+    constructor(id: BoardId, events: Event[] = [], aggregates: Aggregate[] = [], connections: CardConnection[] = []) {
         this._id = id;
         this._events = new Map();
         events.forEach(e => this._events.set(e.id.value, e));
         this._aggregates = [...aggregates];
+        this._connections = [];
+        connections.forEach((connection) => {
+            if (connection.sourceId === connection.targetId) {
+                return;
+            }
+            if (!this._events.has(connection.sourceId) || !this._events.has(connection.targetId)) {
+                return;
+            }
+            const exists = this._connections.some((item) => (
+                item.sourceId === connection.sourceId && item.targetId === connection.targetId
+            ));
+            if (!exists) {
+                this._connections.push(connection);
+            }
+        });
     }
 
     /**
@@ -86,6 +107,9 @@ export class EventStormingBoard {
         }
 
         this._events.delete(eventId.value);
+        this._connections = this._connections.filter((connection) => (
+            connection.sourceId !== eventId.value && connection.targetId !== eventId.value
+        ));
 
         // Aggregate에서도 제거
         this._aggregates = this._aggregates.map(agg => {
@@ -142,6 +166,28 @@ export class EventStormingBoard {
         event.changeName(newName);
     }
 
+    addConnection(sourceId: EventId, targetId: EventId): void {
+        if (sourceId.equals(targetId)) {
+            throw new DomainError('Source and target must be different events');
+        }
+
+        if (!this._events.has(sourceId.value) || !this._events.has(targetId.value)) {
+            throw new DomainError('Connection events must exist on board');
+        }
+
+        const exists = this._connections.some((connection) => (
+            connection.sourceId === sourceId.value && connection.targetId === targetId.value
+        ));
+        if (exists) {
+            return;
+        }
+
+        this._connections.push({
+            sourceId: sourceId.value,
+            targetId: targetId.value,
+        });
+    }
+
     /**
      * 이벤트의 설명을 변경합니다.
      *
@@ -184,6 +230,10 @@ export class EventStormingBoard {
      */
     getAllAggregates(): Aggregate[] {
         return [...this._aggregates];
+    }
+
+    getAllConnections(): CardConnection[] {
+        return [...this._connections];
     }
 
     /**
@@ -382,6 +432,7 @@ export class EventStormingBoard {
     clear(): void {
         this._events.clear();
         this._aggregates = [];
+        this._connections = [];
     }
 
     /**

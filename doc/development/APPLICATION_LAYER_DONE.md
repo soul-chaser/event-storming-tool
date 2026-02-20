@@ -6,6 +6,7 @@
 - ✅ CreateEventCommand + Handler
 - ✅ MoveEventCommand + Handler
 - ✅ DeleteEventCommand + Handler
+- ✅ RenameEventCommand + Handler
 - ✅ DetectAggregatesCommand + Handler
 
 ### Queries (1개)
@@ -23,10 +24,12 @@ src/application/
 │   ├── CreateEventHandler.ts
 │   ├── MoveEventCommand.ts
 │   ├── MoveEventHandler.ts
-│   ├── DeleteEventCommand.ts
-│   ├── DeleteEventHandler.ts
-│   ├── DetectAggregatesCommand.ts
-│   └── DetectAggregatesHandler.ts
+    │   ├── DeleteEventCommand.ts
+    │   ├── DeleteEventHandler.ts
+    │   ├── RenameEventCommand.ts
+    │   ├── RenameEventHandler.ts
+    │   ├── DetectAggregatesCommand.ts
+    │   └── DetectAggregatesHandler.ts
 └── queries/
     ├── GetBoardStateQuery.ts
     └── GetBoardStateHandler.ts
@@ -67,6 +70,11 @@ tests/application/
 - ✅ 존재하지 않는 보드에서는 삭제할 수 없다
 - ✅ 이미 삭제된 이벤트를 다시 삭제할 수 없다
 
+### RenameEventHandler (3 tests)
+- ✅ 이벤트 이름을 변경할 수 있다
+- ✅ 빈 이름으로 변경할 수 없다
+- ✅ 존재하지 않는 이벤트는 변경할 수 없다
+
 ### DetectAggregatesHandler (5 tests)
 - ✅ 근접한 이벤트들을 Aggregate로 그룹화한다
 - ✅ 이벤트가 없으면 Aggregate도 없다
@@ -83,7 +91,7 @@ tests/application/
 - ✅ 존재하지 않는 보드는 조회할 수 없다
 - ✅ 여러 이벤트와 Aggregate가 있는 복잡한 보드를 조회할 수 있다
 
-**총 27개 테스트**
+**총 30개 테스트**
 
 ## 🎯 CQRS 패턴
 
@@ -124,6 +132,6 @@ npm test tests/application/
 ```
 ✅ Domain Layer       100%
 ✅ Application Layer  100%
-⬜ Infrastructure     20%
-⬜ Presentation       0%
+✅ Infrastructure     100%
+✅ Presentation       100%
 ```

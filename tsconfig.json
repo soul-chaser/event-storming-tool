@@ -16,8 +16,8 @@
     "declarationMap": true,
     "sourceMap": true,
     "noEmit": true,
-    "outDir": "./dist",
-    "rootDir": "./",
+    "outDir": "dist",
+    "rootDir": "src",
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],

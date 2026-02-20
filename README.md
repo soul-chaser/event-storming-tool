@@ -56,6 +56,12 @@ npm run test:coverage
 
 # Watch 모드
 npm run test:watch
+
+# 보안 점검 (배포 게이트)
+npm run audit:prod
+
+# 보안 점검 (전체 의존성 참고용)
+npm run audit:all
 ```
 
 ## 🧪 테스트
@@ -146,7 +152,7 @@ event-storming-tool/
 
 ## 🛠️ 기술 스택
 
-- Node.js 18+
+- Node.js 22.12+
 - TypeScript 5+
 - Vitest
 - Hexagonal Architecture

@@ -2,35 +2,49 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { app, BrowserWindow } from 'electron';
 
 // Electron mocks
-vi.mock('electron', () => ({
-    app: {
-        on: vi.fn(),
-        whenReady: vi.fn(() => Promise.resolve()),
-        quit: vi.fn(),
-    },
-    BrowserWindow: vi.fn(() => ({
-        loadFile: vi.fn(),
-        webContents: {
+vi.mock('electron', () => {
+    const browserWindowMock = vi.fn(function mockBrowserWindow() {
+        return {
+            loadURL: vi.fn(),
+            loadFile: vi.fn(),
+            webContents: {
+                openDevTools: vi.fn(),
+            },
+            on: vi.fn(),
+        };
+    });
+    (browserWindowMock as any).getAllWindows = vi.fn(() => []);
+
+    return {
+        app: {
+            on: vi.fn(),
+            whenReady: vi.fn(() => Promise.resolve()),
+            quit: vi.fn(),
+        },
+        BrowserWindow: browserWindowMock,
+        ipcMain: {
+            handle: vi.fn(),
             on: vi.fn(),
         },
-        on: vi.fn(),
-    })),
-    ipcMain: {
-        handle: vi.fn(),
-        on: vi.fn(),
-    },
-}));
+    };
+});
 
 describe('Electron Main Process', () => {
     beforeEach(() => {
+        vi.stubEnv('NODE_ENV', 'test');
+        vi.resetModules();
         vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+        vi.unstubAllEnvs();
     });
 
     describe('App 초기화', () => {
         it('앱이 준비되면 BrowserWindow를 생성한다', async () => {
             const { createWindow } = await import('@presentation/electron/main');
 
-            const window = createWindow();
+            createWindow();
 
             expect(BrowserWindow).toHaveBeenCalled();
         });

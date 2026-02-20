@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { EventStormingCanvas } from './components/EventStormingCanvas';
 import { Toolbar } from './components/Toolbar';
 import { getDefaultEventNameByType } from './constants/eventTypeDefinitions';
@@ -39,7 +39,10 @@ interface BoardSummary {
     updatedAt: string;
 }
 
+type ExportFormat = 'mermaid' | 'plantuml' | 'pdf' | 'png';
+
 function App() {
+    const canvasExportRef = useRef<{ toPNGDataURL: () => string | null } | null>(null);
     const [boardId, setBoardId] = useState<string>('');
     const [boardState, setBoardState] = useState<BoardState | null>(null);
     const [selectedTool, setSelectedTool] = useState<string>('domain-event');
@@ -184,6 +187,33 @@ function App() {
         setIsSettingsModalOpen(true);
     };
 
+    const handleExport = async (format: ExportFormat) => {
+        if (!boardId || !boardState) {
+            return;
+        }
+
+        try {
+            const outputPath = await window.electronAPI.chooseExportPath({ boardId, format });
+            if (!outputPath) {
+                return;
+            }
+
+            const imageDataUrl = (format === 'pdf' || format === 'png')
+                ? canvasExportRef.current?.toPNGDataURL() ?? undefined
+                : undefined;
+
+            await window.electronAPI.exportBoard({
+                boardId,
+                format,
+                outputPath,
+                imageDataUrl,
+            });
+        } catch (error) {
+            console.error(`Failed to export ${format}:`, error);
+            window.alert(`${format.toUpperCase()} export에 실패했습니다.`);
+        }
+    };
+
     const handleSaveStoragePath = async () => {
         const trimmedPath = pendingStoragePath.trim();
         if (!trimmedPath) {
@@ -256,6 +286,7 @@ function App() {
                 selectedTool={selectedTool}
                 onToolChange={setSelectedTool}
                 onDetectAggregates={handleDetectAggregates}
+                onExport={handleExport}
                 storagePath={storagePath}
                 onChangeStoragePath={handleChangeStoragePath}
             />
@@ -265,6 +296,9 @@ function App() {
                 onMoveEvent={handleMoveEvent}
                 onDeleteEvent={handleDeleteEvent}
                 onRenameEvent={handleRenameEvent}
+                onCanvasReady={(api) => {
+                    canvasExportRef.current = api;
+                }}
             />
             {isStartupModalOpen && (
                 <div className="modal-backdrop">

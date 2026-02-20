@@ -8,6 +8,16 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 // ElectronAPI 타입 정의
 export interface ElectronAPI {
+    chooseExportPath: (args: {
+        boardId: string;
+        format: 'mermaid' | 'plantuml' | 'pdf' | 'png';
+    }) => Promise<string | null>;
+    exportBoard: (args: {
+        boardId: string;
+        format: 'mermaid' | 'plantuml' | 'pdf' | 'png';
+        outputPath: string;
+        imageDataUrl?: string;
+    }) => Promise<{ outputPath: string }>;
     createBoard: (args: { name: string }) => Promise<string>;
     listBoards: () => Promise<Array<{
         id: string;
@@ -58,6 +68,8 @@ export interface ElectronAPI {
 
 // API를 window 객체에 노출
 contextBridge.exposeInMainWorld('electronAPI', {
+    chooseExportPath: (args) => ipcRenderer.invoke('choose-export-path', args),
+    exportBoard: (args) => ipcRenderer.invoke('export-board', args),
     createBoard: (args) => ipcRenderer.invoke('create-board', args),
     listBoards: () => ipcRenderer.invoke('list-boards'),
     getConfig: () => ipcRenderer.invoke('get-config'),

@@ -6,6 +6,7 @@ interface ToolbarProps {
     selectedTool: string;
     onToolChange: (tool: string) => void;
     onDetectAggregates: () => void;
+    onExport: (format: 'mermaid' | 'plantuml' | 'pdf' | 'png') => void;
     storagePath: string;
     onChangeStoragePath: () => void;
 }
@@ -14,6 +15,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                                                     selectedTool,
                                                     onToolChange,
                                                     onDetectAggregates,
+                                                    onExport,
                                                     storagePath,
                                                     onChangeStoragePath,
                                                 }) => {
@@ -45,6 +47,22 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 </button>
                 <button className="action-button secondary" onClick={onChangeStoragePath}>
                     저장 경로 변경
+                </button>
+            </div>
+
+            <div className="toolbar-section">
+                <h3>Export</h3>
+                <button className="action-button" onClick={() => onExport('mermaid')}>
+                    Export Mermaid
+                </button>
+                <button className="action-button" onClick={() => onExport('plantuml')}>
+                    Export PlantUML
+                </button>
+                <button className="action-button" onClick={() => onExport('pdf')}>
+                    Export PDF
+                </button>
+                <button className="action-button" onClick={() => onExport('png')}>
+                    Export PNG
                 </button>
             </div>
 

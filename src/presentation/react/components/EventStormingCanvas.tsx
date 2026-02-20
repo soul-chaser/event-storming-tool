@@ -9,6 +9,7 @@ interface EventStormingCanvasProps {
     onMoveEvent: (eventId: string, x: number, y: number) => void;
     onDeleteEvent: (eventId: string) => void;
     onRenameEvent: (eventId: string, newName: string) => void;
+    onCanvasReady?: (api: { toPNGDataURL: () => string | null }) => void;
 }
 
 const INLINE_INPUT_HEIGHT = 28;
@@ -27,6 +28,7 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
                                                                             onMoveEvent,
                                                                             onDeleteEvent,
                                                                             onRenameEvent,
+                                                                            onCanvasReady,
                                                                         }) => {
     const stageRef = useRef(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
@@ -94,6 +96,23 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
         element.style.height = `${nextHeight}px`;
         setEditorHeight(nextHeight);
     }, [editingState?.eventId, editingState?.value, editingEditorDimensions.width]);
+
+    useEffect(() => {
+        if (!onCanvasReady) {
+            return;
+        }
+
+        onCanvasReady({
+            toPNGDataURL: () => {
+                const stage = stageRef.current as { toDataURL: (args: { pixelRatio: number }) => string } | null;
+                if (!stage) {
+                    return null;
+                }
+
+                return stage.toDataURL({ pixelRatio: 2 });
+            },
+        });
+    }, [onCanvasReady, stageSize.width, stageSize.height]);
 
     const handleStageClick = (e: any) => {
         if (editingState) {

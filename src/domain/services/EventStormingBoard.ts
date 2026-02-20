@@ -143,6 +143,22 @@ export class EventStormingBoard {
     }
 
     /**
+     * 이벤트의 설명을 변경합니다.
+     *
+     * @param eventId - 설명을 변경할 이벤트의 ID
+     * @param description - 새로운 설명 (undefined면 제거)
+     * @throws DomainError - 이벤트가 존재하지 않는 경우
+     */
+    updateEventDescription(eventId: EventId, description?: string): void {
+        const event = this._events.get(eventId.value);
+        if (!event) {
+            throw new DomainError('Event not found on board');
+        }
+
+        event.updateDescription(description);
+    }
+
+    /**
      * ID로 이벤트를 조회합니다.
      *
      * @param eventId - 조회할 이벤트의 ID

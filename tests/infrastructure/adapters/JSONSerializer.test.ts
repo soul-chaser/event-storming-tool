@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { JSONSerializer } from '@infrastructure/adapters/JSONSerializer';
 import { EventStormingBoard } from '@domain/services/EventStormingBoard';
 import { BoardId } from '@domain/value-objects/BoardId';

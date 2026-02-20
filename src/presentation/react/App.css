@@ -32,6 +32,20 @@ body {
     cursor: crosshair;
 }
 
+.event-inline-editor {
+    position: absolute;
+    z-index: 20;
+    border: 2px solid #1f2937;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 14px;
+    line-height: 1.25;
+    background: #fff8dc;
+    resize: none;
+    overflow: hidden;
+    white-space: pre-wrap;
+}
+
 /* 스크롤바 스타일 */
 ::-webkit-scrollbar {
     width: 8px;

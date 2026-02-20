@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { EventStormingCanvas } from './components/EventStormingCanvas';
 import { Toolbar } from './components/Toolbar';
+import { getDefaultEventNameByType } from './constants/eventTypeDefinitions';
+import { getEventCardDimensions } from '@shared/utils/eventCardLayout';
 import './App.css';
 
 export interface EventDTO {
@@ -65,7 +67,7 @@ function App() {
         try {
             await window.electronAPI.createEvent({
                 boardId,
-                name: 'New Event',
+                name: getDefaultEventNameByType(selectedTool),
                 type: selectedTool,
                 x,
                 y,
@@ -78,6 +80,15 @@ function App() {
 
     const handleMoveEvent = async (eventId: string, x: number, y: number) => {
         if (!boardId) return;
+        if (!boardState) return;
+
+        const movingEvent = boardState.events.find((event) => event.id === eventId);
+        if (!movingEvent) return;
+
+        if (isOutOfBounds(x, y) || hasCardOverlap(boardState.events, eventId, x, y, movingEvent.name)) {
+            await loadBoardState(boardId);
+            return;
+        }
 
         try {
             await window.electronAPI.moveEvent({
@@ -106,6 +117,21 @@ function App() {
         }
     };
 
+    const handleRenameEvent = async (eventId: string, newName: string) => {
+        if (!boardId) return;
+
+        try {
+            await window.electronAPI.renameEvent({
+                boardId,
+                eventId,
+                newName,
+            });
+            await loadBoardState(boardId);
+        } catch (error) {
+            console.error('Failed to rename event:', error);
+        }
+    };
+
     const handleDetectAggregates = async () => {
         if (!boardId) return;
 
@@ -129,9 +155,52 @@ function App() {
                 onCreateEvent={handleCreateEvent}
                 onMoveEvent={handleMoveEvent}
                 onDeleteEvent={handleDeleteEvent}
+                onRenameEvent={handleRenameEvent}
             />
         </div>
     );
 }
 
 export default App;
+
+function isOutOfBounds(x: number, y: number): boolean {
+    return x < 0 || y < 0 || x > 10000 || y > 10000;
+}
+
+function hasCardOverlap(
+    events: EventDTO[],
+    movingEventId: string,
+    nextX: number,
+    nextY: number,
+    movingEventName: string
+): boolean {
+    const movingDimensions = getEventCardDimensions(movingEventName);
+    const movingBounds = {
+        left: nextX,
+        top: nextY,
+        right: nextX + movingDimensions.width,
+        bottom: nextY + movingDimensions.height,
+    };
+
+    return events.some((event) => {
+        if (event.id === movingEventId) {
+            return false;
+        }
+
+        const dimensions = getEventCardDimensions(event.name);
+        const bounds = {
+            left: event.position.x,
+            top: event.position.y,
+            right: event.position.x + dimensions.width,
+            bottom: event.position.y + dimensions.height,
+        };
+
+        const isSeparated =
+            movingBounds.right <= bounds.left ||
+            movingBounds.left >= bounds.right ||
+            movingBounds.bottom <= bounds.top ||
+            movingBounds.top >= bounds.bottom;
+
+        return !isSeparated;
+    });
+}

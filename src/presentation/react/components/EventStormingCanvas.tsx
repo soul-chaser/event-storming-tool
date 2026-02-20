@@ -1,26 +1,60 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Stage, Layer, Rect, Text, Group } from 'react-konva';
 import { EventDTO, AggregateDTO, BoardState } from '../App';
+import { EVENT_CARD_LAYOUT, getEventCardDimensions } from '@shared/utils/eventCardLayout';
 
 interface EventStormingCanvasProps {
     boardState: BoardState | null;
     onCreateEvent: (x: number, y: number) => void;
     onMoveEvent: (eventId: string, x: number, y: number) => void;
     onDeleteEvent: (eventId: string) => void;
+    onRenameEvent: (eventId: string, newName: string) => void;
 }
 
-const EVENT_CARD_WIDTH = 120;
-const EVENT_CARD_HEIGHT = 80;
+const INLINE_INPUT_HEIGHT = 28;
+const EDITOR_MIN_WIDTH = 120;
+const EDITOR_PADDING_X = 6;
+const EDITOR_PADDING_Y = 4;
+
+interface EditingState {
+    eventId: string;
+    value: string;
+}
 
 export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
                                                                             boardState,
                                                                             onCreateEvent,
                                                                             onMoveEvent,
                                                                             onDeleteEvent,
+                                                                            onRenameEvent,
                                                                         }) => {
     const stageRef = useRef(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
+    const inputRef = useRef<HTMLTextAreaElement | null>(null);
+    const isComposingRef = useRef<boolean>(false);
     const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+    const [editingState, setEditingState] = useState<EditingState | null>(null);
+    const [editorHeight, setEditorHeight] = useState<number>(INLINE_INPUT_HEIGHT);
+    const editingEvent = editingState
+        ? boardState?.events.find((event) => event.id === editingState.eventId) ?? null
+        : null;
+    const editingDimensions = getEventCardDimensions(editingState?.value ?? editingEvent?.name ?? '');
+    const editingEditorDimensions = useMemo(() => {
+        const value = editingState?.value ?? editingEvent?.name ?? '';
+        const lines = value.split('\n');
+        const maxLineUnits = Math.max(1, ...lines.map((line) => (
+            Array.from(line).reduce((acc, char) => acc + (/[^\u0000-\u00ff]/.test(char) ? 2 : 1), 1)
+        )));
+
+        const editorInnerWidth = Math.max(
+            EDITOR_MIN_WIDTH - (EDITOR_PADDING_X * 2),
+            Math.ceil(maxLineUnits * EVENT_CARD_LAYOUT.FONT_SIZE * 0.52)
+        );
+
+        return {
+            width: Math.ceil(editorInnerWidth + (EDITOR_PADDING_X * 2)),
+        };
+    }, [editingEvent?.name, editingState?.value]);
 
     useEffect(() => {
         const element = containerRef.current;
@@ -40,7 +74,33 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
         return () => resizeObserver.disconnect();
     }, []);
 
+    useEffect(() => {
+        if (!editingState) {
+            return;
+        }
+
+        inputRef.current?.focus();
+        inputRef.current?.select();
+    }, [editingState?.eventId]);
+
+    useEffect(() => {
+        if (!editingState || !inputRef.current) {
+            return;
+        }
+
+        const element = inputRef.current;
+        element.style.height = 'auto';
+        const nextHeight = Math.max(INLINE_INPUT_HEIGHT, element.scrollHeight);
+        element.style.height = `${nextHeight}px`;
+        setEditorHeight(nextHeight);
+    }, [editingState?.eventId, editingState?.value, editingEditorDimensions.width]);
+
     const handleStageClick = (e: any) => {
+        if (editingState) {
+            commitInlineRename();
+            return;
+        }
+
         // 빈 공간 클릭 시 이벤트 생성
         if (e.target === e.target.getStage()) {
             const pos = e.target.getStage().getPointerPosition();
@@ -53,7 +113,43 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
         onMoveEvent(eventId, node.x(), node.y());
     };
 
-    const handleEventDoubleClick = (eventId: string) => {
+    const handleEventRenameStart = (event: EventDTO) => {
+        setEditorHeight(INLINE_INPUT_HEIGHT);
+        setEditingState({
+            eventId: event.id,
+            value: event.name,
+        });
+    };
+
+    const commitInlineRename = () => {
+        if (!editingState) {
+            return;
+        }
+
+        if (isComposingRef.current) {
+            return;
+        }
+
+        const originalName = boardState?.events.find((event) => event.id === editingState.eventId)?.name;
+        const trimmedName = editingState.value.trim();
+        setEditingState(null);
+
+        if (!trimmedName || !originalName || trimmedName === originalName) {
+            return;
+        }
+
+        onRenameEvent(editingState.eventId, trimmedName);
+    };
+
+    const cancelInlineRename = () => {
+        setEditingState(null);
+    };
+
+    const handleEventDelete = (eventId: string) => {
+        if (editingState?.eventId === eventId) {
+            cancelInlineRename();
+        }
+
         if (window.confirm('Delete this event?')) {
             onDeleteEvent(eventId);
         }
@@ -78,34 +174,95 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
                         <EventCard
                             key={event.id}
                             event={event}
+                            dimensions={getEventCardDimensions(event.name)}
+                            isEditing={editingState?.eventId === event.id}
                             onDragEnd={(e) => handleEventDragEnd(event.id, e)}
-                            onDoubleClick={() => handleEventDoubleClick(event.id)}
+                            onDoubleClick={() => handleEventRenameStart(event)}
+                            onContextMenu={() => handleEventDelete(event.id)}
                         />
                     ))}
                 </Layer>
             </Stage>
+            {editingState && (
+                <textarea
+                    ref={inputRef}
+                    className="event-inline-editor"
+                    style={{
+                        left: (editingEvent?.position.x ?? 0) + 8,
+                        top: (editingEvent?.position.y ?? 0) + Math.floor((editingDimensions.height - editorHeight) / 2),
+                        width: editingEditorDimensions.width,
+                        height: editorHeight,
+                    }}
+                    value={editingState.value}
+                    onChange={(e) => {
+                        const nextValue = e.currentTarget.value;
+                        setEditingState((prev) => (
+                            prev
+                                ? { ...prev, value: nextValue }
+                                : prev
+                        ));
+                    }}
+                    onBlur={commitInlineRename}
+                    onCompositionStart={() => {
+                        isComposingRef.current = true;
+                    }}
+                    onCompositionEnd={(e) => {
+                        isComposingRef.current = false;
+                        const nextValue = e.currentTarget.value;
+                        setEditingState((prev) => (
+                            prev
+                                ? { ...prev, value: nextValue }
+                                : prev
+                        ));
+                    }}
+                    onKeyDown={(e) => {
+                        const nativeEvent = e.nativeEvent as { isComposing?: boolean } | undefined;
+                        if (isComposingRef.current || nativeEvent?.isComposing === true) {
+                            return;
+                        }
+
+                        if (e.key === 'Enter') {
+                            if (e.shiftKey) {
+                                return;
+                            }
+                            e.preventDefault();
+                            commitInlineRename();
+                        } else if (e.key === 'Escape') {
+                            e.preventDefault();
+                            cancelInlineRename();
+                        }
+                    }}
+                />
+            )}
         </div>
     );
 };
 
 interface EventCardProps {
     event: EventDTO;
+    dimensions: { width: number; height: number };
+    isEditing: boolean;
     onDragEnd: (e: any) => void;
     onDoubleClick: () => void;
+    onContextMenu: () => void;
 }
 
-const EventCard: React.FC<EventCardProps> = ({ event, onDragEnd, onDoubleClick }) => {
+const EventCard: React.FC<EventCardProps> = ({ event, dimensions, isEditing, onDragEnd, onDoubleClick, onContextMenu }) => {
     return (
         <Group
             x={event.position.x}
             y={event.position.y}
-            draggable
+            draggable={!isEditing}
             onDragEnd={onDragEnd}
             onDblClick={onDoubleClick}
+            onContextMenu={(e) => {
+                e.evt.preventDefault();
+                onContextMenu();
+            }}
         >
             <Rect
-                width={EVENT_CARD_WIDTH}
-                height={EVENT_CARD_HEIGHT}
+                width={dimensions.width}
+                height={dimensions.height}
                 fill={event.color}
                 stroke="#333"
                 strokeWidth={2}
@@ -115,14 +272,16 @@ const EventCard: React.FC<EventCardProps> = ({ event, onDragEnd, onDoubleClick }
             />
             <Text
                 text={event.name}
-                width={EVENT_CARD_WIDTH}
-                height={EVENT_CARD_HEIGHT}
+                width={dimensions.width}
+                height={dimensions.height}
                 align="center"
                 verticalAlign="middle"
-                fontSize={14}
+                fontSize={EVENT_CARD_LAYOUT.FONT_SIZE}
+                lineHeight={EVENT_CARD_LAYOUT.LINE_HEIGHT}
                 fontFamily="Arial"
                 fill="#000"
-                padding={10}
+                padding={EVENT_CARD_LAYOUT.PADDING}
+                wrap="char"
             />
         </Group>
     );

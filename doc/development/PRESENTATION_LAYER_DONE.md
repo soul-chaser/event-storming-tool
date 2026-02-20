@@ -86,12 +86,16 @@ window.electronAPI.exportBoard(args);
 - ✅ 드래그로 이벤트 이동
 - ✅ 더블클릭으로 이벤트 이름 편집
 - ✅ 선택 이벤트 카드 이름 변경 (모달, 멀티라인 입력)
-- ✅ 우클릭으로 이벤트 삭제
+- ✅ 드래그 박스 다중 선택 (Shift 추가 선택)
+- ✅ 선택 카드 일괄 이동 (그룹 드래그)
+- ✅ 선택 카드 삭제 (버튼 + Delete/Backspace)
 - ✅ Undo/Redo (스냅샷 기반)
 - ✅ Aggregate 자동 감지
 - ✅ Export (Mermaid, PlantUML, PDF, PNG)
 - ✅ Import (JSON 파일 검증, 현재 보드 덮어쓰기 지원)
-- ✅ 키보드 단축키 (Cmd/Ctrl+I, Cmd/Ctrl+Z/Y, Cmd/Ctrl+E, Cmd/Ctrl+1~6)
+- ✅ 화살머리 선 추가 모드 (선택 카드 -> 타겟 카드)
+- ✅ 연결선 우회 경로 렌더링 및 Board JSON 영구 저장
+- ✅ 키보드 단축키 (Cmd/Ctrl+I, Cmd/Ctrl+Z/Y, Cmd/Ctrl+E, Cmd/Ctrl+L, Cmd/Ctrl+1~6, Delete/Backspace)
 - ✅ 시작 모달(기존 보드 선택 / 신규 생성)
 - ✅ 설정 모달(저장 경로 변경)
 
@@ -296,6 +300,8 @@ npm run test:e2e
 - [x] Undo/Redo
 - [x] 카드 이름 변경
 - [x] 키보드 단축키
+- [x] 다중 선택/그룹 이동/선택 삭제
+- [x] 카드 연결선 추가 및 영구 저장
 
 ### 개선사항
 - [ ] E2E 테스트 (Playwright)

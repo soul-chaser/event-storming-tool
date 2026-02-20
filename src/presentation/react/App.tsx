@@ -30,6 +30,12 @@ export interface BoardState {
     id: string;
     events: EventDTO[];
     aggregates: AggregateDTO[];
+    connections: CardConnection[];
+}
+
+export interface CardConnection {
+    sourceId: string;
+    targetId: string;
 }
 
 interface BoardSummary {
@@ -62,7 +68,8 @@ function App() {
     const [isRenameModalOpen, setIsRenameModalOpen] = useState<boolean>(false);
     const [pendingEventName, setPendingEventName] = useState<string>('');
     const [renameError, setRenameError] = useState<string>('');
-    const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+    const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
+    const [isArrowMode, setIsArrowMode] = useState<boolean>(false);
     const [undoStack, setUndoStack] = useState<string[]>([]);
     const [redoStack, setRedoStack] = useState<string[]>([]);
 
@@ -75,11 +82,8 @@ function App() {
         try {
             const state = await window.electronAPI.getBoardState({ boardId: id });
             setBoardState(state);
-            setSelectedEventId((previous) => (
-                previous && state.events.some((event: EventDTO) => event.id === previous)
-                    ? previous
-                    : null
-            ));
+            const nextIds = new Set(state.events.map((event: EventDTO) => event.id));
+            setSelectedEventIds((previous) => previous.filter((eventId) => nextIds.has(eventId)));
         } catch (error) {
             console.error('Failed to load board state:', error);
         }
@@ -153,37 +157,61 @@ function App() {
         });
     };
 
-    const handleMoveEvent = async (eventId: string, x: number, y: number) => {
-        if (!boardId) return;
-        if (!boardState) return;
+    const handleMoveEvents = async (moves: Array<{ eventId: string; x: number; y: number }>) => {
+        if (!boardId || !boardState || moves.length === 0) return;
 
-        const movingEvent = boardState.events.find((event) => event.id === eventId);
-        if (!movingEvent) return;
+        const nextPositions = new Map(moves.map((move) => [move.eventId, { x: move.x, y: move.y }]));
+        const nextEvents = boardState.events.map((event) => {
+            const nextPosition = nextPositions.get(event.id);
+            return nextPosition ? { ...event, position: nextPosition } : event;
+        });
 
-        if (isOutOfBounds(x, y) || hasCardOverlap(boardState.events, eventId, x, y, movingEvent.name)) {
+        const hasInvalidMove = nextEvents.some((event) => isOutOfBounds(event.position.x, event.position.y));
+        if (hasInvalidMove || hasAnyCardOverlap(nextEvents)) {
             await loadBoardState(boardId);
             return;
         }
 
         await runMutationWithHistory(async () => {
-            await window.electronAPI.moveEvent({
+            const snapshot = await window.electronAPI.getBoardSnapshot({ boardId });
+            const parsed = JSON.parse(snapshot) as {
+                events: Array<{ id: string; position: { x: number; y: number } }>;
+            };
+
+            parsed.events = parsed.events.map((event) => {
+                const nextPosition = nextPositions.get(event.id);
+                if (!nextPosition) {
+                    return event;
+                }
+                return {
+                    ...event,
+                    position: {
+                        x: nextPosition.x,
+                        y: nextPosition.y,
+                    },
+                };
+            });
+
+            await window.electronAPI.replaceBoardSnapshot({
                 boardId,
-                eventId,
-                newX: x,
-                newY: y,
+                snapshot: JSON.stringify(parsed, null, 2),
             });
         });
     };
 
-    const handleDeleteEvent = async (eventId: string) => {
-        if (!boardId) return;
+    const handleDeleteSelectedCards = async () => {
+        if (!boardId || selectedEventIds.length === 0) return;
 
+        const targetIds = [...selectedEventIds];
         await runMutationWithHistory(async () => {
-            await window.electronAPI.deleteEvent({
-                boardId,
-                eventId,
-            });
+            for (const eventId of targetIds) {
+                await window.electronAPI.deleteEvent({
+                    boardId,
+                    eventId,
+                });
+            }
         });
+        setSelectedEventIds([]);
     };
 
     const handleRenameEvent = async (eventId: string, newName: string) => {
@@ -199,12 +227,12 @@ function App() {
     };
 
     const handleRenameSelectedCard = async () => {
-        if (!boardId || !boardState || !selectedEventId) {
+        if (!boardId || !boardState || selectedEventIds.length !== 1) {
             window.alert('먼저 이름을 변경할 카드를 선택하세요.');
             return;
         }
 
-        const selectedEvent = boardState.events.find((event) => event.id === selectedEventId);
+        const selectedEvent = boardState.events.find((event) => event.id === selectedEventIds[0]);
         if (!selectedEvent) {
             window.alert('선택된 카드를 찾을 수 없습니다. 다시 선택 후 시도하세요.');
             return;
@@ -216,7 +244,7 @@ function App() {
     };
 
     const handleSaveCardName = async () => {
-        if (!boardId || !selectedEventId) {
+        if (!boardId || selectedEventIds.length !== 1) {
             setRenameError('선택된 카드가 없습니다.');
             return;
         }
@@ -230,7 +258,7 @@ function App() {
         await runMutationWithHistory(async () => {
             await window.electronAPI.renameEvent({
                 boardId,
-                eventId: selectedEventId,
+                eventId: selectedEventIds[0],
                 newName: nextName,
             });
         });
@@ -259,6 +287,47 @@ function App() {
         await runMutationWithHistory(async () => {
             await window.electronAPI.detectAggregates({ boardId });
         });
+    };
+
+    const handleStartArrowMode = () => {
+        if (selectedEventIds.length === 0) {
+            window.alert('먼저 출발 카드들을 선택하세요.');
+            return;
+        }
+        setIsArrowMode(true);
+    };
+
+    const handleArrowTargetSelect = (targetId: string) => {
+        if (!isArrowMode || selectedEventIds.length === 0) {
+            return;
+        }
+        if (selectedEventIds.includes(targetId)) {
+            return;
+        }
+
+        const toAdd = selectedEventIds.map((sourceId) => ({ sourceId, targetId }));
+        void runMutationWithHistory(async () => {
+            const snapshot = await window.electronAPI.getBoardSnapshot({ boardId });
+            const parsed = JSON.parse(snapshot) as {
+                connections?: CardConnection[];
+            };
+            const existing = parsed.connections ?? [];
+            const dedup = new Set(existing.map((connection) => `${connection.sourceId}->${connection.targetId}`));
+            for (const connection of toAdd) {
+                const key = `${connection.sourceId}->${connection.targetId}`;
+                if (!dedup.has(key)) {
+                    existing.push(connection);
+                    dedup.add(key);
+                }
+            }
+
+            parsed.connections = existing;
+            await window.electronAPI.replaceBoardSnapshot({
+                boardId,
+                snapshot: JSON.stringify(parsed, null, 2),
+            });
+        });
+        setIsArrowMode(false);
     };
 
     const handleUndo = useCallback(async () => {
@@ -315,7 +384,8 @@ function App() {
             setBoardId(imported.boardId);
             setSelectedBoardId(imported.boardId);
             setIsStartupModalOpen(false);
-            setSelectedEventId(null);
+            setSelectedEventIds([]);
+            setIsArrowMode(false);
             resetHistory();
             await loadBoardState(imported.boardId);
         } catch (error) {
@@ -382,6 +452,18 @@ function App() {
                 return;
             }
 
+            if (isPrimaryModifier && key === 'l') {
+                event.preventDefault();
+                handleStartArrowMode();
+                return;
+            }
+
+            if (key === 'delete' || key === 'backspace') {
+                event.preventDefault();
+                void handleDeleteSelectedCards();
+                return;
+            }
+
             if (isPrimaryModifier && /^[1-6]$/.test(key)) {
                 event.preventDefault();
                 const selected = EVENT_TYPE_DEFINITIONS[Number(key) - 1];
@@ -393,7 +475,7 @@ function App() {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleImportBoard, handleRedo, handleRenameSelectedCard, handleUndo, isRenameModalOpen, pendingEventName, selectedEventId, boardId, boardState]);
+    }, [handleImportBoard, handleRedo, handleRenameSelectedCard, handleUndo, isRenameModalOpen, handleDeleteSelectedCards, selectedEventIds]);
 
     const handleChangeStoragePath = async () => {
         setPendingStoragePath(storagePath);
@@ -441,7 +523,8 @@ function App() {
             setIsSettingsModalOpen(false);
             setBoardId('');
             setBoardState(null);
-            setSelectedEventId(null);
+            setSelectedEventIds([]);
+            setIsArrowMode(false);
             resetHistory();
             await initializeStartupFlow();
         } catch (error) {
@@ -460,7 +543,8 @@ function App() {
         setStartupError('');
         try {
             setBoardId(selectedBoardId);
-            setSelectedEventId(null);
+            setSelectedEventIds([]);
+            setIsArrowMode(false);
             resetHistory();
             await loadBoardState(selectedBoardId);
             setIsStartupModalOpen(false);
@@ -486,7 +570,8 @@ function App() {
             const listedBoards = await window.electronAPI.listBoards();
             setBoards(listedBoards);
             setBoardId(createdBoardId);
-            setSelectedEventId(null);
+            setSelectedEventIds([]);
+            setIsArrowMode(false);
             resetHistory();
             await loadBoardState(createdBoardId);
             setNewBoardName('');
@@ -507,6 +592,10 @@ function App() {
                 onToolChange={setSelectedTool}
                 onDetectAggregates={handleDetectAggregates}
                 onImportBoard={handleImportBoard}
+                onDeleteSelectedCards={handleDeleteSelectedCards}
+                canDeleteSelection={selectedEventIds.length > 0}
+                onStartArrowMode={handleStartArrowMode}
+                isArrowMode={isArrowMode}
                 onExport={handleExport}
                 onUndo={handleUndo}
                 onRedo={handleRedo}
@@ -519,11 +608,13 @@ function App() {
             <EventStormingCanvas
                 boardState={boardState}
                 onCreateEvent={handleCreateEvent}
-                onMoveEvent={handleMoveEvent}
-                onDeleteEvent={handleDeleteEvent}
+                onMoveEvents={handleMoveEvents}
                 onRenameEvent={handleRenameEvent}
-                selectedEventId={selectedEventId}
-                onSelectEvent={setSelectedEventId}
+                selectedEventIds={selectedEventIds}
+                onSelectionChange={setSelectedEventIds}
+                isArrowMode={isArrowMode}
+                onArrowTargetSelect={handleArrowTargetSelect}
+                connections={boardState?.connections ?? []}
                 onCanvasReady={(api) => {
                     canvasExportRef.current = api;
                 }}
@@ -685,40 +776,37 @@ function isOutOfBounds(x: number, y: number): boolean {
     return x < 0 || y < 0 || x > 10000 || y > 10000;
 }
 
-function hasCardOverlap(
-    events: EventDTO[],
-    movingEventId: string,
-    nextX: number,
-    nextY: number,
-    movingEventName: string
-): boolean {
-    const movingDimensions = getEventCardDimensions(movingEventName);
-    const movingBounds = {
-        left: nextX,
-        top: nextY,
-        right: nextX + movingDimensions.width,
-        bottom: nextY + movingDimensions.height,
-    };
-
-    return events.some((event) => {
-        if (event.id === movingEventId) {
-            return false;
-        }
-
-        const dimensions = getEventCardDimensions(event.name);
-        const bounds = {
-            left: event.position.x,
-            top: event.position.y,
-            right: event.position.x + dimensions.width,
-            bottom: event.position.y + dimensions.height,
+function hasAnyCardOverlap(events: EventDTO[]): boolean {
+    for (let i = 0; i < events.length; i++) {
+        const a = events[i];
+        const aDimensions = getEventCardDimensions(a.name);
+        const aBounds = {
+            left: a.position.x,
+            top: a.position.y,
+            right: a.position.x + aDimensions.width,
+            bottom: a.position.y + aDimensions.height,
         };
 
-        const isSeparated =
-            movingBounds.right <= bounds.left ||
-            movingBounds.left >= bounds.right ||
-            movingBounds.bottom <= bounds.top ||
-            movingBounds.top >= bounds.bottom;
+        for (let j = i + 1; j < events.length; j++) {
+            const b = events[j];
+            const bDimensions = getEventCardDimensions(b.name);
+            const bBounds = {
+                left: b.position.x,
+                top: b.position.y,
+                right: b.position.x + bDimensions.width,
+                bottom: b.position.y + bDimensions.height,
+            };
 
-        return !isSeparated;
-    });
+            const separated =
+                aBounds.right <= bBounds.left ||
+                aBounds.left >= bBounds.right ||
+                aBounds.bottom <= bBounds.top ||
+                aBounds.top >= bBounds.bottom;
+
+            if (!separated) {
+                return true;
+            }
+        }
+    }
+    return false;
 }

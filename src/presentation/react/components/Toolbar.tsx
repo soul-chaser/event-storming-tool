@@ -7,6 +7,10 @@ interface ToolbarProps {
     onToolChange: (tool: string) => void;
     onDetectAggregates: () => void;
     onImportBoard: () => void;
+    onDeleteSelectedCards: () => void;
+    canDeleteSelection: boolean;
+    onStartArrowMode: () => void;
+    isArrowMode: boolean;
     onExport: (format: 'mermaid' | 'plantuml' | 'pdf' | 'png') => void;
     onUndo: () => void;
     onRedo: () => void;
@@ -22,6 +26,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                                                     onToolChange,
                                                     onDetectAggregates,
                                                     onImportBoard,
+                                                    onDeleteSelectedCards,
+                                                    canDeleteSelection,
+                                                    onStartArrowMode,
+                                                    isArrowMode,
                                                     onExport,
                                                     onUndo,
                                                     onRedo,
@@ -62,6 +70,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                     <span>Import JSON</span>
                     <span className="shortcut-chip">Cmd/Ctrl+I</span>
                 </button>
+                <button className="action-button secondary" onClick={onDeleteSelectedCards} disabled={!canDeleteSelection}>
+                    <span>선택 카드 삭제</span>
+                    <span className="shortcut-chip">Delete / Backspace</span>
+                </button>
                 <button className="action-button secondary" onClick={onUndo} disabled={!canUndo}>
                     <span>Undo</span>
                     <span className="shortcut-chip">Cmd/Ctrl+Z</span>
@@ -76,6 +88,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 >
                     <span>카드 이름 변경</span>
                     <span className="shortcut-chip">Cmd/Ctrl+E</span>
+                </button>
+                <button
+                    className={`action-button secondary ${isArrowMode ? 'active-mode' : ''}`}
+                    onClick={onStartArrowMode}
+                >
+                    <span>화살머리 선 추가</span>
+                    <span className="shortcut-chip">Cmd/Ctrl+L</span>
                 </button>
                 <button className="action-button secondary" onClick={onChangeStoragePath}>
                     저장 경로 변경
@@ -109,10 +128,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                     <p>• Click on canvas to create card</p>
                     <p>• Drag to move card</p>
                     <p>• Double-click to rename card</p>
-                    <p>• Right-click to delete card</p>
                     <p>• Cmd/Ctrl+I: Import JSON</p>
                     <p>• Cmd/Ctrl+Z: Undo, Cmd/Ctrl+Y: Redo</p>
                     <p>• Cmd/Ctrl+E: Rename selected card</p>
+                    <p>• Cmd/Ctrl+L: Add arrowed line mode</p>
                     <p>• Cmd/Ctrl+1~6: Select card type</p>
                 </div>
             </div>

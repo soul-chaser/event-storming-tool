@@ -1,52 +1,78 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Stage, Layer, Rect, Text, Group } from 'react-konva';
-import { EventDTO, AggregateDTO, BoardState } from '../App';
+import { Stage, Layer, Rect, Text, Group, Arrow } from 'react-konva';
+import { AggregateDTO, BoardState, CardConnection, EventDTO } from '../App';
 import { EVENT_CARD_LAYOUT, getEventCardDimensions } from '@shared/utils/eventCardLayout';
+import { buildCardConnectionRoute, CardRect } from '@shared/utils/cardConnectionRouting';
 
 interface EventStormingCanvasProps {
     boardState: BoardState | null;
     onCreateEvent: (x: number, y: number) => void;
-    onMoveEvent: (eventId: string, x: number, y: number) => void;
-    onDeleteEvent: (eventId: string) => void;
+    onMoveEvents: (moves: Array<{ eventId: string; x: number; y: number }>) => void;
     onRenameEvent: (eventId: string, newName: string) => void;
-    selectedEventId?: string | null;
-    onSelectEvent?: (eventId: string | null) => void;
+    selectedEventIds: string[];
+    onSelectionChange: (eventIds: string[]) => void;
+    isArrowMode: boolean;
+    onArrowTargetSelect: (targetId: string) => void;
+    connections: CardConnection[];
     onCanvasReady?: (api: { toPNGDataURL: () => string | null }) => void;
 }
 
 const INLINE_INPUT_HEIGHT = 28;
 const EDITOR_MIN_WIDTH = 120;
 const EDITOR_PADDING_X = 6;
-const EDITOR_PADDING_Y = 4;
 
 interface EditingState {
     eventId: string;
     value: string;
 }
 
+interface SelectionBox {
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
+    additive: boolean;
+}
+
+interface DraggingState {
+    anchorId: string;
+    movingIds: string[];
+    originById: Record<string, { x: number; y: number }>;
+}
+
 export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
-                                                                            boardState,
-                                                                            onCreateEvent,
-                                                                            onMoveEvent,
-                                                                            onDeleteEvent,
-                                                                            onRenameEvent,
-                                                                            selectedEventId,
-                                                                            onSelectEvent,
-                                                                            onCanvasReady,
-                                                                        }) => {
+    boardState,
+    onCreateEvent,
+    onMoveEvents,
+    onRenameEvent,
+    selectedEventIds,
+    onSelectionChange,
+    isArrowMode,
+    onArrowTargetSelect,
+    connections,
+    onCanvasReady,
+}) => {
     const stageRef = useRef(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const inputRef = useRef<HTMLTextAreaElement | null>(null);
     const previousEventIdsRef = useRef<string[]>([]);
     const previousBoardIdRef = useRef<string | null>(null);
     const isComposingRef = useRef<boolean>(false);
+
     const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
     const [editingState, setEditingState] = useState<EditingState | null>(null);
     const [editorHeight, setEditorHeight] = useState<number>(INLINE_INPUT_HEIGHT);
+    const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
+    const [draggingState, setDraggingState] = useState<DraggingState | null>(null);
+    const [dragPreviewById, setDragPreviewById] = useState<Record<string, { x: number; y: number }>>({});
+
+    const selectedSet = useMemo(() => new Set(selectedEventIds), [selectedEventIds]);
     const editingEvent = editingState
         ? boardState?.events.find((event) => event.id === editingState.eventId) ?? null
         : null;
+
     const editingDimensions = getEventCardDimensions(editingState?.value ?? editingEvent?.name ?? '');
+
     const editingEditorDimensions = useMemo(() => {
         const value = editingState?.value ?? editingEvent?.name ?? '';
         const lines = value.split('\n');
@@ -63,6 +89,34 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
             width: Math.ceil(editorInnerWidth + (EDITOR_PADDING_X * 2)),
         };
     }, [editingEvent?.name, editingState?.value]);
+
+    const displayedEvents = useMemo(() => {
+        if (!boardState) return [];
+        return boardState.events.map((event) => {
+            const preview = dragPreviewById[event.id];
+            if (!preview) {
+                return event;
+            }
+            return {
+                ...event,
+                position: { x: preview.x, y: preview.y },
+            };
+        });
+    }, [boardState, dragPreviewById]);
+
+    const cardBoundsById = useMemo(() => {
+        const result: Record<string, CardRect> = {};
+        for (const event of displayedEvents) {
+            const dimensions = getEventCardDimensions(event.name);
+            result[event.id] = {
+                left: event.position.x,
+                top: event.position.y,
+                right: event.position.x + dimensions.width,
+                bottom: event.position.y + dimensions.height,
+            };
+        }
+        return result;
+    }, [displayedEvents]);
 
     useEffect(() => {
         const element = containerRef.current;
@@ -83,18 +137,13 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
     }, []);
 
     useEffect(() => {
-        if (!editingState) {
-            return;
-        }
-
+        if (!editingState) return;
         inputRef.current?.focus();
         inputRef.current?.select();
     }, [editingState?.eventId]);
 
     useEffect(() => {
-        if (!editingState || !inputRef.current) {
-            return;
-        }
+        if (!editingState || !inputRef.current) return;
 
         const element = inputRef.current;
         element.style.height = 'auto';
@@ -114,7 +163,6 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
         }
 
         const previousEventIds = previousEventIdsRef.current;
-
         if (eventIds.length > previousEventIds.length) {
             const addedEvent = boardState?.events.find((event) => !previousEventIds.includes(event.id));
             if (addedEvent) {
@@ -123,47 +171,103 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
                     eventId: addedEvent.id,
                     value: addedEvent.name,
                 });
-                onSelectEvent?.(addedEvent.id);
+                onSelectionChange([addedEvent.id]);
             }
         }
 
         previousEventIdsRef.current = eventIds;
-    }, [boardState, onSelectEvent]);
+    }, [boardState, onSelectionChange]);
 
     useEffect(() => {
-        if (!onCanvasReady) {
-            return;
-        }
+        if (!onCanvasReady) return;
 
         onCanvasReady({
             toPNGDataURL: () => {
                 const stage = stageRef.current as { toDataURL: (args: { pixelRatio: number }) => string } | null;
-                if (!stage) {
-                    return null;
-                }
-
+                if (!stage) return null;
                 return stage.toDataURL({ pixelRatio: 2 });
             },
         });
     }, [onCanvasReady, stageSize.width, stageSize.height]);
 
-    const handleStageClick = (e: any) => {
+    const commitInlineRename = () => {
+        if (!editingState) return;
+        if (isComposingRef.current) return;
+
+        const originalName = boardState?.events.find((event) => event.id === editingState.eventId)?.name;
+        const trimmedName = editingState.value.trim();
+        setEditingState(null);
+
+        if (!trimmedName || !originalName || trimmedName === originalName) return;
+        onRenameEvent(editingState.eventId, trimmedName);
+    };
+
+    const cancelInlineRename = () => {
+        setEditingState(null);
+    };
+
+    const handleStageMouseDown = (e: any) => {
         if (editingState) {
             commitInlineRename();
             return;
         }
 
-        // 빈 공간 클릭 시 이벤트 생성
-        if (e.target === e.target.getStage()) {
-            onSelectEvent?.(null);
-            const pos = e.target.getStage().getPointerPosition();
-            onCreateEvent(pos.x, pos.y);
+        if (e.target !== e.target.getStage()) {
+            return;
         }
+
+        const pos = e.target.getStage().getPointerPosition();
+        if (!pos) return;
+
+        setSelectionBox({
+            startX: pos.x,
+            startY: pos.y,
+            endX: pos.x,
+            endY: pos.y,
+            additive: Boolean(e.evt.shiftKey),
+        });
     };
 
-    const handleEventDragEnd = (eventId: string, e: any) => {
-        const node = e.target;
-        onMoveEvent(eventId, node.x(), node.y());
+    const handleStageMouseMove = (e: any) => {
+        if (!selectionBox) return;
+        const pos = e.target.getStage().getPointerPosition();
+        if (!pos) return;
+
+        setSelectionBox((prev) => (prev ? {
+            ...prev,
+            endX: pos.x,
+            endY: pos.y,
+        } : prev));
+    };
+
+    const handleStageMouseUp = () => {
+        if (!selectionBox) return;
+
+        const width = Math.abs(selectionBox.endX - selectionBox.startX);
+        const height = Math.abs(selectionBox.endY - selectionBox.startY);
+
+        if (width < 4 && height < 4) {
+            if (!selectionBox.additive && !isArrowMode) {
+                onSelectionChange([]);
+                onCreateEvent(selectionBox.startX, selectionBox.startY);
+            }
+            setSelectionBox(null);
+            return;
+        }
+
+        const normalized = normalizeRect(selectionBox.startX, selectionBox.startY, selectionBox.endX, selectionBox.endY);
+        const hits = displayedEvents
+            .filter((event) => intersectsRect(normalized, cardBoundsById[event.id]))
+            .map((event) => event.id);
+
+        if (selectionBox.additive) {
+            const merged = new Set([...selectedEventIds, ...hits]);
+            onSelectionChange(Array.from(merged));
+        } else {
+            onSelectionChange(hits);
+        }
+
+        setSelectionBox(null);
     };
 
     const handleEventRenameStart = (event: EventDTO) => {
@@ -174,39 +278,104 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
         });
     };
 
-    const commitInlineRename = () => {
-        if (!editingState) {
+    const handleCardSelect = (eventId: string, e: any) => {
+        if (isArrowMode) {
+            onArrowTargetSelect(eventId);
             return;
         }
 
-        if (isComposingRef.current) {
+        const shiftKey = Boolean(e?.evt?.shiftKey);
+        if (shiftKey) {
+            if (selectedSet.has(eventId)) {
+                onSelectionChange(selectedEventIds.filter((id) => id !== eventId));
+            } else {
+                onSelectionChange([...selectedEventIds, eventId]);
+            }
             return;
         }
 
-        const originalName = boardState?.events.find((event) => event.id === editingState.eventId)?.name;
-        const trimmedName = editingState.value.trim();
-        setEditingState(null);
+        if (!selectedSet.has(eventId)) {
+            onSelectionChange([eventId]);
+        }
+    };
 
-        if (!trimmedName || !originalName || trimmedName === originalName) {
+    const handleDragStart = (eventId: string) => {
+        const baseIds = selectedSet.has(eventId) && selectedEventIds.length > 0
+            ? selectedEventIds
+            : [eventId];
+
+        if (!selectedSet.has(eventId)) {
+            onSelectionChange([eventId]);
+        }
+
+        const originById: Record<string, { x: number; y: number }> = {};
+        for (const event of boardState?.events ?? []) {
+            if (baseIds.includes(event.id)) {
+                originById[event.id] = { x: event.position.x, y: event.position.y };
+            }
+        }
+
+        setDraggingState({
+            anchorId: eventId,
+            movingIds: baseIds,
+            originById,
+        });
+    };
+
+    const handleDragMove = (e: any) => {
+        if (!draggingState) return;
+
+        const anchorOrigin = draggingState.originById[draggingState.anchorId];
+        if (!anchorOrigin) return;
+
+        const deltaX = e.target.x() - anchorOrigin.x;
+        const deltaY = e.target.y() - anchorOrigin.y;
+
+        const preview: Record<string, { x: number; y: number }> = {};
+        for (const movingId of draggingState.movingIds) {
+            const origin = draggingState.originById[movingId];
+            if (!origin) continue;
+            preview[movingId] = {
+                x: origin.x + deltaX,
+                y: origin.y + deltaY,
+            };
+        }
+        setDragPreviewById(preview);
+    };
+
+    const handleDragEnd = (e: any) => {
+        if (!draggingState) return;
+
+        const anchorOrigin = draggingState.originById[draggingState.anchorId];
+        if (!anchorOrigin) {
+            setDraggingState(null);
+            setDragPreviewById({});
             return;
         }
 
-        onRenameEvent(editingState.eventId, trimmedName);
+        const deltaX = e.target.x() - anchorOrigin.x;
+        const deltaY = e.target.y() - anchorOrigin.y;
+
+        const moves = draggingState.movingIds
+            .map((eventId) => {
+                const origin = draggingState.originById[eventId];
+                if (!origin) return null;
+                return {
+                    eventId,
+                    x: origin.x + deltaX,
+                    y: origin.y + deltaY,
+                };
+            })
+            .filter((move): move is { eventId: string; x: number; y: number } => move !== null);
+
+        setDraggingState(null);
+        setDragPreviewById({});
+        onMoveEvents(moves);
     };
 
-    const cancelInlineRename = () => {
-        setEditingState(null);
-    };
-
-    const handleEventDelete = (eventId: string) => {
-        if (editingState?.eventId === eventId) {
-            cancelInlineRename();
-        }
-
-        if (window.confirm('Delete this card?')) {
-            onDeleteEvent(eventId);
-        }
-    };
+    const selectionRect = selectionBox
+        ? normalizeRect(selectionBox.startX, selectionBox.startY, selectionBox.endX, selectionBox.endY)
+        : null;
 
     return (
         <div className="canvas-container" ref={containerRef}>
@@ -214,28 +383,69 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
                 width={stageSize.width}
                 height={stageSize.height}
                 ref={stageRef}
-                onClick={handleStageClick}
+                onMouseDown={handleStageMouseDown}
+                onMouseMove={handleStageMouseMove}
+                onMouseUp={handleStageMouseUp}
             >
                 <Layer>
-                    {/* Aggregate 배경 */}
                     {boardState?.aggregates.map((aggregate) => (
                         <AggregateBox key={aggregate.id} aggregate={aggregate} />
                     ))}
 
-                    {/* Event 카드 */}
-                    {boardState?.events.map((event) => (
+                    {connections.map((connection) => {
+                        const sourceBounds = cardBoundsById[connection.sourceId];
+                        const targetBounds = cardBoundsById[connection.targetId];
+                        if (!sourceBounds || !targetBounds) {
+                            return null;
+                        }
+
+                        const route = buildCardConnectionRoute(
+                            sourceBounds,
+                            targetBounds,
+                            Object.values(cardBoundsById)
+                        );
+
+                        return (
+                            <Arrow
+                                key={`${connection.sourceId}->${connection.targetId}`}
+                                points={route}
+                                stroke="#0f172a"
+                                fill="#0f172a"
+                                strokeWidth={2}
+                                pointerLength={8}
+                                pointerWidth={8}
+                                lineJoin="round"
+                            />
+                        );
+                    })}
+
+                    {displayedEvents.map((event) => (
                         <EventCard
                             key={event.id}
                             event={event}
                             dimensions={getEventCardDimensions(event.name)}
                             isEditing={editingState?.eventId === event.id}
-                            isSelected={selectedEventId === event.id}
-                            onDragEnd={(e) => handleEventDragEnd(event.id, e)}
-                            onSelect={() => onSelectEvent?.(event.id)}
+                            isSelected={selectedSet.has(event.id)}
+                            onDragStart={() => handleDragStart(event.id)}
+                            onDragMove={handleDragMove}
+                            onDragEnd={handleDragEnd}
+                            onSelect={(e) => handleCardSelect(event.id, e)}
                             onDoubleClick={() => handleEventRenameStart(event)}
-                            onContextMenu={() => handleEventDelete(event.id)}
                         />
                     ))}
+
+                    {selectionRect && (
+                        <Rect
+                            x={selectionRect.left}
+                            y={selectionRect.top}
+                            width={selectionRect.right - selectionRect.left}
+                            height={selectionRect.bottom - selectionRect.top}
+                            fill="rgba(59, 130, 246, 0.15)"
+                            stroke="#2563eb"
+                            strokeWidth={1.5}
+                            dash={[6, 4]}
+                        />
+                    )}
                 </Layer>
             </Stage>
             {editingState && (
@@ -251,11 +461,7 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
                     value={editingState.value}
                     onChange={(e) => {
                         const nextValue = e.currentTarget.value;
-                        setEditingState((prev) => (
-                            prev
-                                ? { ...prev, value: nextValue }
-                                : prev
-                        ));
+                        setEditingState((prev) => (prev ? { ...prev, value: nextValue } : prev));
                     }}
                     onBlur={commitInlineRename}
                     onCompositionStart={() => {
@@ -264,11 +470,7 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
                     onCompositionEnd={(e) => {
                         isComposingRef.current = false;
                         const nextValue = e.currentTarget.value;
-                        setEditingState((prev) => (
-                            prev
-                                ? { ...prev, value: nextValue }
-                                : prev
-                        ));
+                        setEditingState((prev) => (prev ? { ...prev, value: nextValue } : prev));
                     }}
                     onKeyDown={(e) => {
                         const nativeEvent = e.nativeEvent as { isComposing?: boolean } | undefined;
@@ -277,9 +479,7 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
                         }
 
                         if (e.key === 'Enter') {
-                            if (e.shiftKey) {
-                                return;
-                            }
+                            if (e.shiftKey) return;
                             e.preventDefault();
                             commitInlineRename();
                         } else if (e.key === 'Escape') {
@@ -298,27 +498,35 @@ interface EventCardProps {
     dimensions: { width: number; height: number };
     isEditing: boolean;
     isSelected: boolean;
+    onDragStart: () => void;
+    onDragMove: (e: any) => void;
     onDragEnd: (e: any) => void;
-    onSelect: () => void;
+    onSelect: (e: any) => void;
     onDoubleClick: () => void;
-    onContextMenu: () => void;
 }
 
-const EventCard: React.FC<EventCardProps> = ({ event, dimensions, isEditing, isSelected, onDragEnd, onSelect, onDoubleClick, onContextMenu }) => {
+const EventCard: React.FC<EventCardProps> = ({
+    event,
+    dimensions,
+    isEditing,
+    isSelected,
+    onDragStart,
+    onDragMove,
+    onDragEnd,
+    onSelect,
+    onDoubleClick,
+}) => {
     return (
         <Group
             x={event.position.x}
             y={event.position.y}
             draggable={!isEditing}
+            onDragStart={onDragStart}
+            onDragMove={onDragMove}
             onDragEnd={onDragEnd}
-            onClick={onSelect}
             onTap={onSelect}
             onMouseDown={onSelect}
             onDblClick={onDoubleClick}
-            onContextMenu={(e) => {
-                e.evt.preventDefault();
-                onContextMenu();
-            }}
         >
             <Rect
                 width={dimensions.width}
@@ -382,3 +590,24 @@ const AggregateBox: React.FC<AggregateBoxProps> = ({ aggregate }) => {
         </Group>
     );
 };
+
+function normalizeRect(startX: number, startY: number, endX: number, endY: number): CardRect {
+    return {
+        left: Math.min(startX, endX),
+        right: Math.max(startX, endX),
+        top: Math.min(startY, endY),
+        bottom: Math.max(startY, endY),
+    };
+}
+
+function intersectsRect(a: CardRect, b?: CardRect): boolean {
+    if (!b) return false;
+
+    const separated =
+        a.right < b.left ||
+        a.left > b.right ||
+        a.bottom < b.top ||
+        a.top > b.bottom;
+
+    return !separated;
+}

@@ -46,6 +46,12 @@ npm run electron:dev
 - `src/infrastructure`: 파일 저장소/직렬화/어댑터
 - `src/presentation`: Electron IPC + React UI
 
+## TypeScript 경로 규칙
+
+- 소스 import alias는 `@application/*`, `@domain/*`, `@infrastructure/*`, `@presentation/*`를 사용합니다.
+- TypeScript 소스 간 import는 `.js` 확장자를 직접 붙이지 않습니다.
+- 루트 `tsconfig.json`의 `rootDir`는 `.`이며, `src`와 `tests`를 함께 타입체크합니다.
+
 ## 테스트
 
 현재 Vitest 기준 전체 테스트가 통과해야 정상 상태입니다.

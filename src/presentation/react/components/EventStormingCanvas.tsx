@@ -9,6 +9,8 @@ interface EventStormingCanvasProps {
     onMoveEvent: (eventId: string, x: number, y: number) => void;
     onDeleteEvent: (eventId: string) => void;
     onRenameEvent: (eventId: string, newName: string) => void;
+    selectedEventId?: string | null;
+    onSelectEvent?: (eventId: string | null) => void;
     onCanvasReady?: (api: { toPNGDataURL: () => string | null }) => void;
 }
 
@@ -28,6 +30,8 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
                                                                             onMoveEvent,
                                                                             onDeleteEvent,
                                                                             onRenameEvent,
+                                                                            selectedEventId,
+                                                                            onSelectEvent,
                                                                             onCanvasReady,
                                                                         }) => {
     const stageRef = useRef(null);
@@ -122,6 +126,7 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
 
         // 빈 공간 클릭 시 이벤트 생성
         if (e.target === e.target.getStage()) {
+            onSelectEvent?.(null);
             const pos = e.target.getStage().getPointerPosition();
             onCreateEvent(pos.x, pos.y);
         }
@@ -195,7 +200,9 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
                             event={event}
                             dimensions={getEventCardDimensions(event.name)}
                             isEditing={editingState?.eventId === event.id}
+                            isSelected={selectedEventId === event.id}
                             onDragEnd={(e) => handleEventDragEnd(event.id, e)}
+                            onClick={() => onSelectEvent?.(event.id)}
                             onDoubleClick={() => handleEventRenameStart(event)}
                             onContextMenu={() => handleEventDelete(event.id)}
                         />
@@ -261,18 +268,21 @@ interface EventCardProps {
     event: EventDTO;
     dimensions: { width: number; height: number };
     isEditing: boolean;
+    isSelected: boolean;
     onDragEnd: (e: any) => void;
+    onClick: () => void;
     onDoubleClick: () => void;
     onContextMenu: () => void;
 }
 
-const EventCard: React.FC<EventCardProps> = ({ event, dimensions, isEditing, onDragEnd, onDoubleClick, onContextMenu }) => {
+const EventCard: React.FC<EventCardProps> = ({ event, dimensions, isEditing, isSelected, onDragEnd, onClick, onDoubleClick, onContextMenu }) => {
     return (
         <Group
             x={event.position.x}
             y={event.position.y}
             draggable={!isEditing}
             onDragEnd={onDragEnd}
+            onClick={onClick}
             onDblClick={onDoubleClick}
             onContextMenu={(e) => {
                 e.evt.preventDefault();
@@ -283,8 +293,8 @@ const EventCard: React.FC<EventCardProps> = ({ event, dimensions, isEditing, onD
                 width={dimensions.width}
                 height={dimensions.height}
                 fill={event.color}
-                stroke="#333"
-                strokeWidth={2}
+                stroke={isSelected ? '#111827' : '#333'}
+                strokeWidth={isSelected ? 4 : 2}
                 cornerRadius={5}
                 shadowBlur={5}
                 shadowOpacity={0.3}

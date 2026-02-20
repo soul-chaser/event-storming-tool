@@ -74,6 +74,13 @@
     transform: translateY(0);
 }
 
+.action-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
 .action-button.secondary {
     background-color: #16a085;
 }

@@ -1,10 +1,12 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron';
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
+import * as path from 'node:path';
 
 import { CreateEventHandler } from '@application/commands/CreateEventHandler';
 import { MoveEventHandler } from '@application/commands/MoveEventHandler';
 import { DeleteEventHandler } from '@application/commands/DeleteEventHandler';
 import { RenameEventHandler } from '@application/commands/RenameEventHandler';
+import { UpdateEventDescriptionHandler } from '@application/commands/UpdateEventDescriptionHandler';
 import { DetectAggregatesHandler } from '@application/commands/DetectAggregatesHandler';
 import { GetBoardStateHandler } from '@application/queries/GetBoardStateHandler';
 
@@ -12,6 +14,7 @@ import { CreateEventCommand } from '@application/commands/CreateEventCommand';
 import { MoveEventCommand } from '@application/commands/MoveEventCommand';
 import { DeleteEventCommand } from '@application/commands/DeleteEventCommand';
 import { RenameEventCommand } from '@application/commands/RenameEventCommand';
+import { UpdateEventDescriptionCommand } from '@application/commands/UpdateEventDescriptionCommand';
 import { DetectAggregatesCommand } from '@application/commands/DetectAggregatesCommand';
 import { GetBoardStateQuery } from '@application/queries/GetBoardStateQuery';
 import {
@@ -20,11 +23,13 @@ import {
 } from '@application/services/BoardExportFormatter';
 
 import { FileSystemBoardRepository } from '@infrastructure/repositories/FileSystemBoardRepository';
+import { JSONSerializer } from '@infrastructure/adapters/JSONSerializer';
 
 import { loadAppConfig, saveAppConfig } from './AppConfigStore.js';
 
 let repository: FileSystemBoardRepository | null = null;
 let repositoryPath: string | null = null;
+const serializer = new JSONSerializer();
 type ExportFormat = 'mermaid' | 'plantuml' | 'pdf' | 'png';
 
 async function getRepository(): Promise<FileSystemBoardRepository> {
@@ -77,6 +82,13 @@ export function setupIPCHandlers(): void {
         await renameEventHandler.handle(command);
     });
 
+    ipcMain.handle('update-event-description', async (_event, args) => {
+        const repo = await getRepository();
+        const updateEventDescriptionHandler = new UpdateEventDescriptionHandler(repo as any);
+        const command = new UpdateEventDescriptionCommand(args.boardId, args.eventId, args.description);
+        await updateEventDescriptionHandler.handle(command);
+    });
+
     ipcMain.handle('detect-aggregates', async (_event, args) => {
         const repo = await getRepository();
         const detectAggregatesHandler = new DetectAggregatesHandler(repo as any);
@@ -116,6 +128,46 @@ export function setupIPCHandlers(): void {
         await repo.registerBoardName(board.id, args.name);
         await repo.save(board);
         return board.id.value;
+    });
+
+    ipcMain.handle('choose-import-path', async () => {
+        const result = await dialog.showOpenDialog({
+            title: 'Import Board JSON',
+            properties: ['openFile'],
+            filters: [{ name: 'JSON', extensions: ['json'] }],
+        });
+
+        if (result.canceled || result.filePaths.length === 0) {
+            return null;
+        }
+
+        return result.filePaths[0];
+    });
+
+    ipcMain.handle('import-board-json', async (_event, args: { filePath: string; boardName?: string }) => {
+        const repo = await getRepository();
+        const raw = await readFile(args.filePath, 'utf-8');
+        const board = serializer.deserialize(raw);
+        const fallbackName = path.basename(args.filePath, path.extname(args.filePath));
+        await repo.registerBoardName(board.id, args.boardName ?? fallbackName);
+        await repo.save(board);
+        return { boardId: board.id.value };
+    });
+
+    ipcMain.handle('get-board-snapshot', async (_event, args: { boardId: string }) => {
+        const repo = await getRepository();
+        const { BoardId } = await import('@domain/value-objects/BoardId');
+        const board = await repo.load(new BoardId(args.boardId));
+        return serializer.serialize(board);
+    });
+
+    ipcMain.handle('replace-board-snapshot', async (_event, args: { boardId: string; snapshot: string }) => {
+        const repo = await getRepository();
+        const board = serializer.deserialize(args.snapshot);
+        if (board.id.value !== args.boardId) {
+            throw new Error('Snapshot boardId does not match target board');
+        }
+        await repo.save(board);
     });
 
     ipcMain.handle('choose-export-path', async (_event, args: { boardId: string; format: ExportFormat }) => {

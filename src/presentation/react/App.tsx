@@ -1,7 +1,7 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { EventStormingCanvas } from './components/EventStormingCanvas';
 import { Toolbar } from './components/Toolbar';
-import { getDefaultEventNameByType } from './constants/eventTypeDefinitions';
+import { EVENT_TYPE_DEFINITIONS, getDefaultEventNameByType } from './constants/eventTypeDefinitions';
 import { getEventCardDimensions } from '@shared/utils/eventCardLayout';
 import './App.css';
 
@@ -40,6 +40,7 @@ interface BoardSummary {
 }
 
 type ExportFormat = 'mermaid' | 'plantuml' | 'pdf' | 'png';
+const HISTORY_LIMIT = 50;
 
 function App() {
     const canvasExportRef = useRef<{ toPNGDataURL: () => string | null } | null>(null);
@@ -57,9 +58,31 @@ function App() {
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
     const [pendingStoragePath, setPendingStoragePath] = useState<string>('');
     const [settingsError, setSettingsError] = useState<string>('');
+    const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+    const [undoStack, setUndoStack] = useState<string[]>([]);
+    const [redoStack, setRedoStack] = useState<string[]>([]);
+
+    const resetHistory = useCallback(() => {
+        setUndoStack([]);
+        setRedoStack([]);
+    }, []);
+
+    const loadBoardState = useCallback(async (id: string) => {
+        try {
+            const state = await window.electronAPI.getBoardState({ boardId: id });
+            setBoardState(state);
+            setSelectedEventId((previous) => (
+                previous && state.events.some((event: EventDTO) => event.id === previous)
+                    ? previous
+                    : null
+            ));
+        } catch (error) {
+            console.error('Failed to load board state:', error);
+        }
+    }, []);
 
     useEffect(() => {
-        initializeStartupFlow();
+        void initializeStartupFlow();
     }, []);
 
     const initializeStartupFlow = async () => {
@@ -90,19 +113,32 @@ function App() {
         }
     };
 
-    const loadBoardState = async (id: string) => {
+    const runMutationWithHistory = useCallback(async (
+        mutation: () => Promise<void>,
+        options?: { preserveRedo?: boolean }
+    ) => {
+        if (!boardId) return;
+
         try {
-            const state = await window.electronAPI.getBoardState({ boardId: id });
-            setBoardState(state);
+            const beforeSnapshot = await window.electronAPI.getBoardSnapshot({ boardId });
+            await mutation();
+            const afterSnapshot = await window.electronAPI.getBoardSnapshot({ boardId });
+            if (beforeSnapshot !== afterSnapshot) {
+                setUndoStack((previous) => [...previous.slice(-(HISTORY_LIMIT - 1)), beforeSnapshot]);
+                if (!options?.preserveRedo) {
+                    setRedoStack([]);
+                }
+            }
+            await loadBoardState(boardId);
         } catch (error) {
-            console.error('Failed to load board state:', error);
+            console.error('Failed to apply mutation:', error);
         }
-    };
+    }, [boardId, loadBoardState]);
 
     const handleCreateEvent = async (x: number, y: number) => {
         if (!boardId) return;
 
-        try {
+        await runMutationWithHistory(async () => {
             await window.electronAPI.createEvent({
                 boardId,
                 name: getDefaultEventNameByType(selectedTool),
@@ -110,10 +146,7 @@ function App() {
                 x,
                 y,
             });
-            await loadBoardState(boardId);
-        } catch (error) {
-            console.error('Failed to create event:', error);
-        }
+        });
     };
 
     const handleMoveEvent = async (eventId: string, x: number, y: number) => {
@@ -128,58 +161,175 @@ function App() {
             return;
         }
 
-        try {
+        await runMutationWithHistory(async () => {
             await window.electronAPI.moveEvent({
                 boardId,
                 eventId,
                 newX: x,
                 newY: y,
             });
-            await loadBoardState(boardId);
-        } catch (error) {
-            console.error('Failed to move event:', error);
-        }
+        });
     };
 
     const handleDeleteEvent = async (eventId: string) => {
         if (!boardId) return;
 
-        try {
+        await runMutationWithHistory(async () => {
             await window.electronAPI.deleteEvent({
                 boardId,
                 eventId,
             });
-            await loadBoardState(boardId);
-        } catch (error) {
-            console.error('Failed to delete event:', error);
-        }
+        });
     };
 
     const handleRenameEvent = async (eventId: string, newName: string) => {
         if (!boardId) return;
 
-        try {
+        await runMutationWithHistory(async () => {
             await window.electronAPI.renameEvent({
                 boardId,
                 eventId,
                 newName,
             });
-            await loadBoardState(boardId);
-        } catch (error) {
-            console.error('Failed to rename event:', error);
-        }
+        });
+    };
+
+    const handleUpdateEventDescription = async () => {
+        if (!boardId || !boardState || !selectedEventId) return;
+
+        const selectedEvent = boardState.events.find((event) => event.id === selectedEventId);
+        if (!selectedEvent) return;
+
+        const input = window.prompt('이벤트 설명을 입력하세요.', selectedEvent.description ?? '');
+        if (input === null) return;
+
+        await runMutationWithHistory(async () => {
+            await window.electronAPI.updateEventDescription({
+                boardId,
+                eventId: selectedEventId,
+                description: input,
+            });
+        });
     };
 
     const handleDetectAggregates = async () => {
         if (!boardId) return;
 
-        try {
+        await runMutationWithHistory(async () => {
             await window.electronAPI.detectAggregates({ boardId });
+        });
+    };
+
+    const handleUndo = useCallback(async () => {
+        if (!boardId || undoStack.length === 0) return;
+
+        const targetSnapshot = undoStack[undoStack.length - 1];
+
+        try {
+            const currentSnapshot = await window.electronAPI.getBoardSnapshot({ boardId });
+            await window.electronAPI.replaceBoardSnapshot({
+                boardId,
+                snapshot: targetSnapshot,
+            });
+            setUndoStack((previous) => previous.slice(0, -1));
+            setRedoStack((previous) => [...previous.slice(-(HISTORY_LIMIT - 1)), currentSnapshot]);
             await loadBoardState(boardId);
         } catch (error) {
-            console.error('Failed to detect aggregates:', error);
+            console.error('Failed to undo:', error);
         }
-    };
+    }, [boardId, undoStack, loadBoardState]);
+
+    const handleRedo = useCallback(async () => {
+        if (!boardId || redoStack.length === 0) return;
+
+        const targetSnapshot = redoStack[redoStack.length - 1];
+
+        try {
+            const currentSnapshot = await window.electronAPI.getBoardSnapshot({ boardId });
+            await window.electronAPI.replaceBoardSnapshot({
+                boardId,
+                snapshot: targetSnapshot,
+            });
+            setRedoStack((previous) => previous.slice(0, -1));
+            setUndoStack((previous) => [...previous.slice(-(HISTORY_LIMIT - 1)), currentSnapshot]);
+            await loadBoardState(boardId);
+        } catch (error) {
+            console.error('Failed to redo:', error);
+        }
+    }, [boardId, redoStack, loadBoardState]);
+
+    const handleImportBoard = useCallback(async () => {
+        try {
+            const filePath = await window.electronAPI.chooseImportPath();
+            if (!filePath) {
+                return;
+            }
+
+            const imported = await window.electronAPI.importBoardJSON({ filePath });
+            const listedBoards = await window.electronAPI.listBoards();
+            setBoards(listedBoards);
+            setBoardId(imported.boardId);
+            setSelectedBoardId(imported.boardId);
+            setIsStartupModalOpen(false);
+            setSelectedEventId(null);
+            resetHistory();
+            await loadBoardState(imported.boardId);
+        } catch (error) {
+            console.error('Failed to import board:', error);
+            window.alert('JSON import에 실패했습니다. 파일 형식을 확인하세요.');
+        }
+    }, [loadBoardState, resetHistory]);
+
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            const target = event.target as HTMLElement | null;
+            const isTextInput = target
+                ? target instanceof HTMLInputElement ||
+                target instanceof HTMLTextAreaElement ||
+                target.isContentEditable
+                : false;
+
+            if (isTextInput) {
+                return;
+            }
+
+            const key = event.key.toLowerCase();
+            const isPrimaryModifier = event.metaKey || event.ctrlKey;
+
+            if (isPrimaryModifier && key === 'z') {
+                event.preventDefault();
+                if (event.shiftKey) {
+                    void handleRedo();
+                } else {
+                    void handleUndo();
+                }
+                return;
+            }
+
+            if (isPrimaryModifier && key === 'y') {
+                event.preventDefault();
+                void handleRedo();
+                return;
+            }
+
+            if (isPrimaryModifier && key === 'i') {
+                event.preventDefault();
+                void handleImportBoard();
+                return;
+            }
+
+            if (isPrimaryModifier && /^[1-6]$/.test(key)) {
+                event.preventDefault();
+                const selected = EVENT_TYPE_DEFINITIONS[Number(key) - 1];
+                if (selected) {
+                    setSelectedTool(selected.value);
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleImportBoard, handleRedo, handleUndo]);
 
     const handleChangeStoragePath = async () => {
         setPendingStoragePath(storagePath);
@@ -227,6 +377,8 @@ function App() {
             setIsSettingsModalOpen(false);
             setBoardId('');
             setBoardState(null);
+            setSelectedEventId(null);
+            resetHistory();
             await initializeStartupFlow();
         } catch (error) {
             console.error('Failed to change storage path:', error);
@@ -244,6 +396,8 @@ function App() {
         setStartupError('');
         try {
             setBoardId(selectedBoardId);
+            setSelectedEventId(null);
+            resetHistory();
             await loadBoardState(selectedBoardId);
             setIsStartupModalOpen(false);
         } catch (error) {
@@ -268,6 +422,8 @@ function App() {
             const listedBoards = await window.electronAPI.listBoards();
             setBoards(listedBoards);
             setBoardId(createdBoardId);
+            setSelectedEventId(null);
+            resetHistory();
             await loadBoardState(createdBoardId);
             setNewBoardName('');
             setSelectedBoardId(createdBoardId);
@@ -286,7 +442,14 @@ function App() {
                 selectedTool={selectedTool}
                 onToolChange={setSelectedTool}
                 onDetectAggregates={handleDetectAggregates}
+                onImportBoard={handleImportBoard}
                 onExport={handleExport}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                canUndo={undoStack.length > 0}
+                canRedo={redoStack.length > 0}
+                onEditDescription={handleUpdateEventDescription}
+                hasSelectedEvent={Boolean(selectedEventId)}
                 storagePath={storagePath}
                 onChangeStoragePath={handleChangeStoragePath}
             />
@@ -296,6 +459,8 @@ function App() {
                 onMoveEvent={handleMoveEvent}
                 onDeleteEvent={handleDeleteEvent}
                 onRenameEvent={handleRenameEvent}
+                selectedEventId={selectedEventId}
+                onSelectEvent={setSelectedEventId}
                 onCanvasReady={(api) => {
                     canvasExportRef.current = api;
                 }}

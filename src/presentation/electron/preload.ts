@@ -8,6 +8,10 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 // ElectronAPI 타입 정의
 export interface ElectronAPI {
+    chooseImportPath: () => Promise<string | null>;
+    importBoardJSON: (args: { filePath: string; boardName?: string }) => Promise<{ boardId: string }>;
+    getBoardSnapshot: (args: { boardId: string }) => Promise<string>;
+    replaceBoardSnapshot: (args: { boardId: string; snapshot: string }) => Promise<void>;
     chooseExportPath: (args: {
         boardId: string;
         format: 'mermaid' | 'plantuml' | 'pdf' | 'png';
@@ -56,6 +60,12 @@ export interface ElectronAPI {
         newName: string;
     }) => Promise<void>;
 
+    updateEventDescription: (args: {
+        boardId: string;
+        eventId: string;
+        description?: string;
+    }) => Promise<void>;
+
     detectAggregates: (args: {
         boardId: string;
     }) => Promise<void>;
@@ -68,6 +78,10 @@ export interface ElectronAPI {
 
 // API를 window 객체에 노출
 contextBridge.exposeInMainWorld('electronAPI', {
+    chooseImportPath: () => ipcRenderer.invoke('choose-import-path'),
+    importBoardJSON: (args) => ipcRenderer.invoke('import-board-json', args),
+    getBoardSnapshot: (args) => ipcRenderer.invoke('get-board-snapshot', args),
+    replaceBoardSnapshot: (args) => ipcRenderer.invoke('replace-board-snapshot', args),
     chooseExportPath: (args) => ipcRenderer.invoke('choose-export-path', args),
     exportBoard: (args) => ipcRenderer.invoke('export-board', args),
     createBoard: (args) => ipcRenderer.invoke('create-board', args),
@@ -78,6 +92,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     moveEvent: (args) => ipcRenderer.invoke('move-event', args),
     deleteEvent: (args) => ipcRenderer.invoke('delete-event', args),
     renameEvent: (args) => ipcRenderer.invoke('rename-event', args),
+    updateEventDescription: (args) => ipcRenderer.invoke('update-event-description', args),
     detectAggregates: (args) => ipcRenderer.invoke('detect-aggregates', args),
     getBoardState: (args) => ipcRenderer.invoke('get-board-state', args),
 } as ElectronAPI);

@@ -6,7 +6,14 @@ interface ToolbarProps {
     selectedTool: string;
     onToolChange: (tool: string) => void;
     onDetectAggregates: () => void;
+    onImportBoard: () => void;
     onExport: (format: 'mermaid' | 'plantuml' | 'pdf' | 'png') => void;
+    onUndo: () => void;
+    onRedo: () => void;
+    canUndo: boolean;
+    canRedo: boolean;
+    onEditDescription: () => void;
+    hasSelectedEvent: boolean;
     storagePath: string;
     onChangeStoragePath: () => void;
 }
@@ -15,7 +22,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                                                     selectedTool,
                                                     onToolChange,
                                                     onDetectAggregates,
+                                                    onImportBoard,
                                                     onExport,
+                                                    onUndo,
+                                                    onRedo,
+                                                    canUndo,
+                                                    canRedo,
+                                                    onEditDescription,
+                                                    hasSelectedEvent,
                                                     storagePath,
                                                     onChangeStoragePath,
                                                 }) => {
@@ -44,6 +58,22 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 <h3>Actions</h3>
                 <button className="action-button" onClick={onDetectAggregates}>
                     Detect Aggregates
+                </button>
+                <button className="action-button secondary" onClick={onImportBoard}>
+                    Import JSON
+                </button>
+                <button className="action-button secondary" onClick={onUndo} disabled={!canUndo}>
+                    Undo
+                </button>
+                <button className="action-button secondary" onClick={onRedo} disabled={!canRedo}>
+                    Redo
+                </button>
+                <button
+                    className="action-button secondary"
+                    onClick={onEditDescription}
+                    disabled={!hasSelectedEvent}
+                >
+                    이벤트 설명 편집
                 </button>
                 <button className="action-button secondary" onClick={onChangeStoragePath}>
                     저장 경로 변경
@@ -78,6 +108,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                     <p>• Drag to move event</p>
                     <p>• Double-click to rename event</p>
                     <p>• Right-click to delete event</p>
+                    <p>• Cmd/Ctrl+I: Import JSON</p>
+                    <p>• Cmd/Ctrl+Z: Undo, Cmd/Ctrl+Y: Redo</p>
+                    <p>• Cmd/Ctrl+1~6: Select event type</p>
                 </div>
             </div>
         </div>

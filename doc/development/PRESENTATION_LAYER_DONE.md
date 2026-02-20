@@ -41,8 +41,8 @@ tests/presentation/
 
 Configuration:
 ├── vite.config.ts           # Vite 설정
-├── index.html               # HTML 템플릿
-└── package-updated.json     # 업데이트된 의존성
+├── src/presentation/react/index.html  # HTML 템플릿
+└── package.json             # 의존성 및 스크립트
 ```
 
 ## 🎯 주요 기능
@@ -63,6 +63,8 @@ window.electronAPI.createEvent(args);
 window.electronAPI.moveEvent(args);
 window.electronAPI.deleteEvent(args);
 window.electronAPI.getBoardState(args);
+window.electronAPI.chooseExportPath(args);
+window.electronAPI.exportBoard(args);
 ```
 
 ### 3. React + Konva 캔버스
@@ -85,6 +87,7 @@ window.electronAPI.getBoardState(args);
 - ✅ 더블클릭으로 이벤트 이름 편집
 - ✅ 우클릭으로 이벤트 삭제
 - ✅ Aggregate 자동 감지
+- ✅ Export (Mermaid, PlantUML, PDF, PNG)
 - ✅ 시작 모달(기존 보드 선택 / 신규 생성)
 - ✅ 설정 모달(저장 경로 변경)
 
@@ -106,6 +109,14 @@ window.electronAPI.getBoardState(args);
 │ Actions         │
 │ ┌─────────────┐ │
 │ │Detect Agg.  │ │
+│ └─────────────┘ │
+│                 │
+│ Export          │
+│ ┌─────────────┐ │
+│ │Mermaid      │ │
+│ │PlantUML     │ │
+│ │PDF          │ │
+│ │PNG          │ │
 │ └─────────────┘ │
 │                 │
 │ Settings        │
@@ -238,6 +249,13 @@ Toolbar > 저장 경로 변경
 → 저장 후 해당 경로의 보드 목록을 다시 표시
 ```
 
+### 7. 다이어그램 내보내기
+```
+Toolbar > Export 형식 선택
+→ 저장 경로 선택
+→ Mermaid(.mmd) / PlantUML(.puml) / PDF(.pdf) / PNG(.png)로 저장
+```
+
 ## 🧪 테스트
 
 ```bash
@@ -262,7 +280,7 @@ npm run test:e2e
 ## 🚀 다음 단계 (선택사항)
 
 ### 추가 기능
-- [ ] Export (Mermaid, PlantUML, PDF, PNG)
+- [x] Export (Mermaid, PlantUML, PDF, PNG)
 - [ ] Import (JSON 파일 검증)
 - [ ] Undo/Redo
 - [ ] 이벤트 설명 편집

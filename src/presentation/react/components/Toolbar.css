@@ -39,6 +39,10 @@
     transition: all 0.2s;
     text-align: left;
     color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
 }
 
 .tool-button:hover {
@@ -62,6 +66,10 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
 }
 
 .action-button:hover {
@@ -87,6 +95,17 @@
 
 .action-button.secondary:hover {
     background-color: #13856d;
+}
+
+.shortcut-chip {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.18);
+    color: inherit;
+    white-space: nowrap;
 }
 
 .storage-path {

@@ -34,9 +34,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     return (
         <div className="toolbar">
             <div className="toolbar-section">
-                <h3>Event Types</h3>
+                <h3>Card Types</h3>
                 <div className="tool-buttons">
-                    {EVENT_TYPE_DEFINITIONS.map((type) => (
+                    {EVENT_TYPE_DEFINITIONS.map((type, index) => (
                         <button
                             key={type.value}
                             className={`tool-button ${selectedTool === type.value ? 'active' : ''}`}
@@ -46,7 +46,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                             }}
                             onClick={() => onToolChange(type.value)}
                         >
-                            {type.label}
+                            <span>{type.label}</span>
+                            <span className="shortcut-chip">{`Cmd/Ctrl+${index + 1}`}</span>
                         </button>
                     ))}
                 </div>
@@ -58,19 +59,23 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                     Detect Aggregates
                 </button>
                 <button className="action-button secondary" onClick={onImportBoard}>
-                    Import JSON
+                    <span>Import JSON</span>
+                    <span className="shortcut-chip">Cmd/Ctrl+I</span>
                 </button>
                 <button className="action-button secondary" onClick={onUndo} disabled={!canUndo}>
-                    Undo
+                    <span>Undo</span>
+                    <span className="shortcut-chip">Cmd/Ctrl+Z</span>
                 </button>
                 <button className="action-button secondary" onClick={onRedo} disabled={!canRedo}>
-                    Redo
+                    <span>Redo</span>
+                    <span className="shortcut-chip">Cmd/Ctrl+Y</span>
                 </button>
                 <button
                     className="action-button secondary"
                     onClick={onRenameCard}
                 >
-                    카드 이름 변경
+                    <span>카드 이름 변경</span>
+                    <span className="shortcut-chip">Cmd/Ctrl+E</span>
                 </button>
                 <button className="action-button secondary" onClick={onChangeStoragePath}>
                     저장 경로 변경
@@ -101,13 +106,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <div className="toolbar-section">
                 <h3>Help</h3>
                 <div className="help-text">
-                    <p>• Click on canvas to create event</p>
-                    <p>• Drag to move event</p>
-                    <p>• Double-click to rename event</p>
-                    <p>• Right-click to delete event</p>
+                    <p>• Click on canvas to create card</p>
+                    <p>• Drag to move card</p>
+                    <p>• Double-click to rename card</p>
+                    <p>• Right-click to delete card</p>
                     <p>• Cmd/Ctrl+I: Import JSON</p>
                     <p>• Cmd/Ctrl+Z: Undo, Cmd/Ctrl+Y: Redo</p>
-                    <p>• Cmd/Ctrl+1~6: Select event type</p>
+                    <p>• Cmd/Ctrl+E: Rename selected card</p>
+                    <p>• Cmd/Ctrl+1~6: Select card type</p>
                 </div>
             </div>
         </div>

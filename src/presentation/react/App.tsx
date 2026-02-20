@@ -44,6 +44,7 @@ const HISTORY_LIMIT = 50;
 
 function App() {
     const canvasExportRef = useRef<{ toPNGDataURL: () => string | null } | null>(null);
+    const renameInputRef = useRef<HTMLTextAreaElement | null>(null);
     const [boardId, setBoardId] = useState<string>('');
     const [boardState, setBoardState] = useState<BoardState | null>(null);
     const [selectedTool, setSelectedTool] = useState<string>('domain-event');
@@ -199,13 +200,13 @@ function App() {
 
     const handleRenameSelectedCard = async () => {
         if (!boardId || !boardState || !selectedEventId) {
-            window.alert('먼저 이름을 변경할 이벤트 카드를 선택하세요.');
+            window.alert('먼저 이름을 변경할 카드를 선택하세요.');
             return;
         }
 
         const selectedEvent = boardState.events.find((event) => event.id === selectedEventId);
         if (!selectedEvent) {
-            window.alert('선택된 이벤트를 찾을 수 없습니다. 다시 선택 후 시도하세요.');
+            window.alert('선택된 카드를 찾을 수 없습니다. 다시 선택 후 시도하세요.');
             return;
         }
 
@@ -216,7 +217,7 @@ function App() {
 
     const handleSaveCardName = async () => {
         if (!boardId || !selectedEventId) {
-            setRenameError('선택된 이벤트가 없습니다.');
+            setRenameError('선택된 카드가 없습니다.');
             return;
         }
 
@@ -237,6 +238,20 @@ function App() {
         setIsRenameModalOpen(false);
         setRenameError('');
     };
+
+    const handleCloseRenameModal = () => {
+        setIsRenameModalOpen(false);
+        setRenameError('');
+    };
+
+    useEffect(() => {
+        if (!isRenameModalOpen) {
+            return;
+        }
+
+        renameInputRef.current?.focus();
+        renameInputRef.current?.select();
+    }, [isRenameModalOpen]);
 
     const handleDetectAggregates = async () => {
         if (!boardId) return;
@@ -308,6 +323,23 @@ function App() {
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
+            const key = event.key.toLowerCase();
+            const isPrimaryModifier = event.metaKey || event.ctrlKey;
+
+            if (isRenameModalOpen) {
+                if (key === 'escape') {
+                    event.preventDefault();
+                    handleCloseRenameModal();
+                    return;
+                }
+
+                if (isPrimaryModifier && key === 'enter') {
+                    event.preventDefault();
+                    void handleSaveCardName();
+                    return;
+                }
+            }
+
             const target = event.target as HTMLElement | null;
             const isTextInput = target
                 ? target instanceof HTMLInputElement ||
@@ -318,9 +350,6 @@ function App() {
             if (isTextInput) {
                 return;
             }
-
-            const key = event.key.toLowerCase();
-            const isPrimaryModifier = event.metaKey || event.ctrlKey;
 
             if (isPrimaryModifier && key === 'z') {
                 event.preventDefault();
@@ -344,6 +373,12 @@ function App() {
                 return;
             }
 
+            if (isPrimaryModifier && key === 'e') {
+                event.preventDefault();
+                void handleRenameSelectedCard();
+                return;
+            }
+
             if (isPrimaryModifier && /^[1-6]$/.test(key)) {
                 event.preventDefault();
                 const selected = EVENT_TYPE_DEFINITIONS[Number(key) - 1];
@@ -355,7 +390,7 @@ function App() {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleImportBoard, handleRedo, handleUndo]);
+    }, [handleImportBoard, handleRedo, handleRenameSelectedCard, handleUndo, isRenameModalOpen, pendingEventName, selectedEventId, boardId, boardState]);
 
     const handleChangeStoragePath = async () => {
         setPendingStoragePath(storagePath);
@@ -610,11 +645,12 @@ function App() {
                 <div className="modal-backdrop">
                     <div className="modal settings-modal">
                         <h2>카드 이름 변경</h2>
-                        <p className="modal-description">선택한 이벤트 카드의 이름을 변경합니다.</p>
+                        <p className="modal-description">선택한 카드의 이름을 변경합니다.</p>
                         <div className="field-group">
                             <label htmlFor="event-name-input">카드 이름</label>
                             <textarea
                                 id="event-name-input"
+                                ref={renameInputRef}
                                 value={pendingEventName}
                                 onChange={(e) => setPendingEventName(e.currentTarget.value)}
                                 rows={4}
@@ -622,8 +658,8 @@ function App() {
                         </div>
                         {renameError && <p className="modal-error">{renameError}</p>}
                         <div className="modal-actions">
-                            <button className="primary" onClick={handleSaveCardName}>저장</button>
-                            <button className="secondary" onClick={() => setIsRenameModalOpen(false)}>취소</button>
+                            <button className="primary" onClick={handleSaveCardName}>저장 (Cmd/Ctrl+Enter)</button>
+                            <button className="secondary" onClick={handleCloseRenameModal}>취소 (Esc)</button>
                         </div>
                     </div>
                 </div>

@@ -37,6 +37,8 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
     const stageRef = useRef(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const inputRef = useRef<HTMLTextAreaElement | null>(null);
+    const previousEventIdsRef = useRef<string[]>([]);
+    const previousBoardIdRef = useRef<string | null>(null);
     const isComposingRef = useRef<boolean>(false);
     const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
     const [editingState, setEditingState] = useState<EditingState | null>(null);
@@ -100,6 +102,33 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
         element.style.height = `${nextHeight}px`;
         setEditorHeight(nextHeight);
     }, [editingState?.eventId, editingState?.value, editingEditorDimensions.width]);
+
+    useEffect(() => {
+        const boardId = boardState?.id ?? null;
+        const eventIds = boardState?.events.map((event) => event.id) ?? [];
+
+        if (previousBoardIdRef.current !== boardId) {
+            previousBoardIdRef.current = boardId;
+            previousEventIdsRef.current = eventIds;
+            return;
+        }
+
+        const previousEventIds = previousEventIdsRef.current;
+
+        if (eventIds.length > previousEventIds.length) {
+            const addedEvent = boardState?.events.find((event) => !previousEventIds.includes(event.id));
+            if (addedEvent) {
+                setEditorHeight(INLINE_INPUT_HEIGHT);
+                setEditingState({
+                    eventId: addedEvent.id,
+                    value: addedEvent.name,
+                });
+                onSelectEvent?.(addedEvent.id);
+            }
+        }
+
+        previousEventIdsRef.current = eventIds;
+    }, [boardState, onSelectEvent]);
 
     useEffect(() => {
         if (!onCanvasReady) {
@@ -174,7 +203,7 @@ export const EventStormingCanvas: React.FC<EventStormingCanvasProps> = ({
             cancelInlineRename();
         }
 
-        if (window.confirm('Delete this event?')) {
+        if (window.confirm('Delete this card?')) {
             onDeleteEvent(eventId);
         }
     };

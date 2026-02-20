@@ -1,20 +1,20 @@
 import { ipcMain } from 'electron';
 
-import { CreateEventHandler } from '@core/application/commands/CreateEventHandler.js';
-import { MoveEventHandler } from '@core/application/commands/MoveEventHandler.js';
-import { DeleteEventHandler } from '@core/application/commands/DeleteEventHandler.js';
-import { RenameEventHandler } from '@core/application/commands/RenameEventHandler.js';
-import { DetectAggregatesHandler } from '@core/application/commands/DetectAggregatesHandler.js';
-import { GetBoardStateHandler } from '@core/application/queries/GetBoardStateHandler.js';
+import { CreateEventHandler } from '@application/commands/CreateEventHandler';
+import { MoveEventHandler } from '@application/commands/MoveEventHandler';
+import { DeleteEventHandler } from '@application/commands/DeleteEventHandler';
+import { RenameEventHandler } from '@application/commands/RenameEventHandler';
+import { DetectAggregatesHandler } from '@application/commands/DetectAggregatesHandler';
+import { GetBoardStateHandler } from '@application/queries/GetBoardStateHandler';
 
-import { CreateEventCommand } from '@core/application/commands/CreateEventCommand.js';
-import { MoveEventCommand } from '@core/application/commands/MoveEventCommand.js';
-import { DeleteEventCommand } from '@core/application/commands/DeleteEventCommand.js';
-import { RenameEventCommand } from '@core/application/commands/RenameEventCommand.js';
-import { DetectAggregatesCommand } from '@core/application/commands/DetectAggregatesCommand.js';
-import { GetBoardStateQuery } from '@core/application/queries/GetBoardStateQuery.js';
+import { CreateEventCommand } from '@application/commands/CreateEventCommand';
+import { MoveEventCommand } from '@application/commands/MoveEventCommand';
+import { DeleteEventCommand } from '@application/commands/DeleteEventCommand';
+import { RenameEventCommand } from '@application/commands/RenameEventCommand';
+import { DetectAggregatesCommand } from '@application/commands/DetectAggregatesCommand';
+import { GetBoardStateQuery } from '@application/queries/GetBoardStateQuery';
 
-import { FileSystemBoardRepository } from '@core/infrastructure/repositories/FileSystemBoardRepository.js';
+import { FileSystemBoardRepository } from '@infrastructure/repositories/FileSystemBoardRepository';
 
 import { loadAppConfig, saveAppConfig } from './AppConfigStore.js';
 
@@ -103,8 +103,8 @@ export function setupIPCHandlers(): void {
 
     ipcMain.handle('create-board', async (_event, args) => {
         const repo = await getRepository();
-        const { EventStormingBoard } = await import('@core/domain/services/EventStormingBoard.js');
-        const { BoardId } = await import('@core/domain/value-objects/BoardId.js');
+        const { EventStormingBoard } = await import('@domain/services/EventStormingBoard');
+        const { BoardId } = await import('@domain/value-objects/BoardId');
 
         const board = EventStormingBoard.create(BoardId.generate());
         await repo.registerBoardName(board.id, args.name);

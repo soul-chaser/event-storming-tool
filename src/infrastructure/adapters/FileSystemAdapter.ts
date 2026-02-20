@@ -30,13 +30,15 @@ export class FileSystemAdapter {
      */
     async saveFile(filename: string, content: string): Promise<void> {
         const safePath = this.sanitizePath(filename);
+        const tempPath = this.sanitizePath(`${filename}.tmp`);
 
         // 디렉토리 생성
         const dir = path.dirname(safePath);
         await fs.mkdir(dir, { recursive: true });
 
-        // 파일 저장 (소유자만 읽기/쓰기)
-        await fs.writeFile(safePath, content, { mode: 0o600 });
+        // 원자적 저장: 임시 파일에 먼저 쓴 뒤 rename
+        await fs.writeFile(tempPath, content, { mode: 0o600 });
+        await fs.rename(tempPath, safePath);
     }
 
     /**

@@ -16,23 +16,24 @@ import { GetBoardStateQuery } from '@core/application/queries/GetBoardStateQuery
 
 import { FileSystemBoardRepository } from '@core/infrastructure/repositories/FileSystemBoardRepository.js';
 
-import * as path from 'path';
-import * as os from 'os';
+import { loadAppConfig, saveAppConfig } from './AppConfigStore.js';
 
-// 저장소 초기화
-const dataPath = path.join(os.homedir(), '.event-storming-tool', 'boards');
-const repository = new FileSystemBoardRepository(dataPath);
+let repository: FileSystemBoardRepository | null = null;
+let repositoryPath: string | null = null;
 
-// 핸들러 초기화
-const createEventHandler = new CreateEventHandler(repository as any);
-const moveEventHandler = new MoveEventHandler(repository as any);
-const deleteEventHandler = new DeleteEventHandler(repository as any);
-const renameEventHandler = new RenameEventHandler(repository as any);
-const detectAggregatesHandler = new DetectAggregatesHandler(repository as any);
-const getBoardStateHandler = new GetBoardStateHandler(repository as any);
+async function getRepository(): Promise<FileSystemBoardRepository> {
+    const config = await loadAppConfig();
+    if (!repository || repositoryPath !== config.boardsPath) {
+        repository = new FileSystemBoardRepository(config.boardsPath);
+        repositoryPath = config.boardsPath;
+    }
+    return repository;
+}
 
 export function setupIPCHandlers(): void {
     ipcMain.handle('create-event', async (_event, args) => {
+        const repo = await getRepository();
+        const createEventHandler = new CreateEventHandler(repo as any);
         const command = new CreateEventCommand(
             args.boardId,
             args.name,
@@ -45,6 +46,8 @@ export function setupIPCHandlers(): void {
     });
 
     ipcMain.handle('move-event', async (_event, args) => {
+        const repo = await getRepository();
+        const moveEventHandler = new MoveEventHandler(repo as any);
         const command = new MoveEventCommand(
             args.boardId,
             args.eventId,
@@ -55,35 +58,57 @@ export function setupIPCHandlers(): void {
     });
 
     ipcMain.handle('delete-event', async (_event, args) => {
+        const repo = await getRepository();
+        const deleteEventHandler = new DeleteEventHandler(repo as any);
         const command = new DeleteEventCommand(args.boardId, args.eventId);
         await deleteEventHandler.handle(command);
     });
 
     ipcMain.handle('rename-event', async (_event, args) => {
+        const repo = await getRepository();
+        const renameEventHandler = new RenameEventHandler(repo as any);
         const command = new RenameEventCommand(args.boardId, args.eventId, args.newName);
         await renameEventHandler.handle(command);
     });
 
     ipcMain.handle('detect-aggregates', async (_event, args) => {
+        const repo = await getRepository();
+        const detectAggregatesHandler = new DetectAggregatesHandler(repo as any);
         const command = new DetectAggregatesCommand(args.boardId);
         await detectAggregatesHandler.handle(command);
     });
 
     ipcMain.handle('get-board-state', async (_event, args) => {
+        const repo = await getRepository();
+        const getBoardStateHandler = new GetBoardStateHandler(repo as any);
         const query = new GetBoardStateQuery(args.boardId);
         return await getBoardStateHandler.handle(query);
     });
 
     ipcMain.handle('list-boards', async () => {
-        return await repository.listAll();
+        const repo = await getRepository();
+        return await repo.listBoards();
     });
 
-    ipcMain.handle('create-board', async () => {
+    ipcMain.handle('get-config', async () => {
+        return await loadAppConfig();
+    });
+
+    ipcMain.handle('update-boards-path', async (_event, args) => {
+        const config = await saveAppConfig({ boardsPath: args.boardsPath });
+        repository = new FileSystemBoardRepository(config.boardsPath);
+        repositoryPath = config.boardsPath;
+        return config;
+    });
+
+    ipcMain.handle('create-board', async (_event, args) => {
+        const repo = await getRepository();
         const { EventStormingBoard } = await import('@core/domain/services/EventStormingBoard.js');
         const { BoardId } = await import('@core/domain/value-objects/BoardId.js');
 
         const board = EventStormingBoard.create(BoardId.generate());
-        await repository.save(board);
+        await repo.registerBoardName(board.id, args.name);
+        await repo.save(board);
         return board.id.value;
     });
 }

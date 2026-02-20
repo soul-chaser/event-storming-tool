@@ -1,14 +1,15 @@
-# Infrastructure Layer 완성! 🎉
+# Infrastructure Layer 현행화 (2026-02) ✅
 
 ## ✅ 완료 항목
 
-### Adapters (3개)
+### Adapters
 - ✅ FileSystemAdapter (파일 시스템 접근)
 - ✅ JSONSerializer (직렬화/역직렬화)
 
-### Repositories (2개)
+### Repositories
 - ✅ InMemoryEventRepository (메모리 저장소)
 - ✅ FileSystemBoardRepository (파일 저장소)
+- ✅ Board index 기반 메타데이터 관리 (`.board-index.json`)
 
 ## 📁 파일 구조
 
@@ -31,21 +32,24 @@ tests/infrastructure/
 
 ## 🧪 테스트 커버리지
 
-### FileSystemAdapter (15 tests)
+### FileSystemAdapter
 - ✅ 파일 저장/로드/삭제
 - ✅ Path Traversal 방지
 - ✅ 파일 크기 제한
 - ✅ 파일 목록 조회
+- ✅ 원자적 저장 (임시 파일 기록 후 rename)
 
-### JSONSerializer (8 tests)
+### JSONSerializer
 - ✅ 직렬화/역직렬화
 - ✅ 버전 검증
 - ✅ Round-trip 테스트
 
-### FileSystemBoardRepository (12 tests)
+### FileSystemBoardRepository
 - ✅ 보드 저장/로드/삭제
 - ✅ 존재 여부 확인
 - ✅ 전체 목록 조회
+- ✅ 보드 이름/수정시각 관리
+- ✅ 레거시 UUID 파일 fallback 로딩
 
 **총 35개 테스트**
 
@@ -64,6 +68,10 @@ const content = await adapter.loadFile('board.json');
 // 파일 목록
 const files = await adapter.listFiles('.json');
 ```
+
+원자적 저장은 내부적으로 다음 순서로 처리됩니다.
+1. `<filename>.tmp`에 먼저 저장
+2. `rename`으로 최종 파일 치환
 
 ### JSONSerializer
 ```typescript
@@ -90,6 +98,13 @@ const board = await repo.load(boardId);
 const ids = await repo.listAll();
 ```
 
+보드 이름 기반 파일명 및 메타데이터 등록:
+```typescript
+await repo.registerBoardName(board.id, '주문 결제 플로우');
+await repo.save(board);
+const boards = await repo.listBoards(); // [{ id, name, fileName, updatedAt }]
+```
+
 ## 🔐 보안 기능
 
 ### Path Traversal 방지
@@ -109,14 +124,11 @@ await adapter.loadFile('huge-file.json');
 // → DomainError
 ```
 
-## 📊 진행률
+## 📊 현재 상태
 
-```
-✅ Domain Layer       100%
-✅ Application Layer  100%
-✅ Infrastructure     100%
-⬜ Presentation       0%
-```
+- 저장소는 변경 시점마다 파일에 즉시 저장됩니다.
+- 저장 경로는 앱 설정(`~/.event_storming_tool/.config`)으로 관리됩니다.
+- 보드 파일 기본 저장 위치는 `~/.event_storming_tool/boards` 입니다.
 
 ## 🧪 테스트 실행
 

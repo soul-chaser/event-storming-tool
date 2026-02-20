@@ -8,6 +8,16 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 // ElectronAPI 타입 정의
 export interface ElectronAPI {
+    createBoard: (args: { name: string }) => Promise<string>;
+    listBoards: () => Promise<Array<{
+        id: string;
+        name: string;
+        fileName: string;
+        updatedAt: string;
+    }>>;
+    getConfig: () => Promise<{ boardsPath: string }>;
+    updateBoardsPath: (args: { boardsPath: string }) => Promise<{ boardsPath: string }>;
+
     // Commands
     createEvent: (args: {
         boardId: string;
@@ -44,22 +54,20 @@ export interface ElectronAPI {
     getBoardState: (args: {
         boardId: string;
     }) => Promise<any>;
-
-    listBoards: () => Promise<string[]>;
-
-    createBoard: () => Promise<string>;
 }
 
 // API를 window 객체에 노출
 contextBridge.exposeInMainWorld('electronAPI', {
+    createBoard: (args) => ipcRenderer.invoke('create-board', args),
+    listBoards: () => ipcRenderer.invoke('list-boards'),
+    getConfig: () => ipcRenderer.invoke('get-config'),
+    updateBoardsPath: (args) => ipcRenderer.invoke('update-boards-path', args),
     createEvent: (args) => ipcRenderer.invoke('create-event', args),
     moveEvent: (args) => ipcRenderer.invoke('move-event', args),
     deleteEvent: (args) => ipcRenderer.invoke('delete-event', args),
     renameEvent: (args) => ipcRenderer.invoke('rename-event', args),
     detectAggregates: (args) => ipcRenderer.invoke('detect-aggregates', args),
     getBoardState: (args) => ipcRenderer.invoke('get-board-state', args),
-    listBoards: () => ipcRenderer.invoke('list-boards'),
-    createBoard: () => ipcRenderer.invoke('create-board'),
 } as ElectronAPI);
 
 // TypeScript 타입 선언
